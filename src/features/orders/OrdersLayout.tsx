@@ -1,0 +1,3 @@
+import { LayoutGrid,List,Plus } from 'lucide-react'
+import { NavLink,Outlet } from 'react-router-dom'
+export function OrdersLayout(){return <div className="orders-module page-enter"><div className="orders-heading"><div><span className="eyebrow">Operação</span><h1>Pedidos</h1><p>Acompanhe todos os canais em um único fluxo.</p></div><NavLink className="new-order-button" to="/pedidos/novo"><Plus size={18}/> Novo pedido</NavLink></div><nav className="orders-tabs"><NavLink to="/pedidos" end><List size={16}/> Todos os pedidos</NavLink><NavLink to="/pedidos/quadro"><LayoutGrid size={16}/> Quadro operacional</NavLink></nav><Outlet/></div>}

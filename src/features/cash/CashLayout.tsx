@@ -1,0 +1,3 @@
+import { History,Landmark,MonitorCog,Plus } from 'lucide-react'
+import { NavLink,Outlet } from 'react-router-dom'
+export function CashLayout(){return <div className="cash-module page-enter"><div className="cash-heading"><div><span className="eyebrow">Financeiro operacional</span><h1>Caixa</h1><p>Aberturas, movimentações e conferências da unidade.</p></div><NavLink className="new-order-button" to="/caixa/abrir"><Plus size={18}/> Abrir caixa</NavLink></div><nav className="orders-tabs"><NavLink to="/caixa" end><Landmark size={16}/> Caixa atual</NavLink><NavLink to="/caixa/historico"><History size={16}/> Histórico</NavLink><NavLink to="/caixa/terminais"><MonitorCog size={16}/> Terminais</NavLink></nav><Outlet/></div>}

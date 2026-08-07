@@ -1,6 +1,6 @@
 import { useState, type FormEvent } from 'react'
 import { ArrowRight, CheckCircle2, Eye, EyeOff, LoaderCircle, ShieldCheck } from 'lucide-react'
-import { Navigate, useLocation, useNavigate } from 'react-router-dom'
+import { Link, Navigate, useLocation, useNavigate } from 'react-router-dom'
 import { Logo } from '../components/brand/Logo'
 import { useAuth } from '../features/auth/auth-context'
 import { ApiError } from '../lib/api'
@@ -39,6 +39,6 @@ export function LoginPage() {
       <div className="form-options"><label className="checkbox-label"><input type="checkbox" /> <span>Lembrar e-mail</span></label><a href="#recuperar">Esqueci minha senha</a></div>
       {error && <div className="form-error" role="alert">{error}</div>}
       <button className="primary-button" disabled={loading}>{loading ? <LoaderCircle className="spin" size={20} /> : <>Entrar no NexPDV <ArrowRight size={19} /></>}</button>
-    </form><p className="form-support">Precisa de ajuda? <a href="mailto:suporte@nexpdv.com.br">Fale com o suporte</a></p></div></section>
+    </form><p className="register-invite">Ainda não usa o NexPDV? <Link to="/cadastro">Crie sua empresa</Link></p><p className="form-support">Precisa de ajuda? <a href="mailto:suporte@nexpdv.com.br">Fale com o suporte</a></p></div></section>
   </div>
 }

@@ -12,6 +12,18 @@ export type AuthSession = {
 type ApiEnvelope<T> = { data: T; message?: string }
 type ApiErrorBody = { error?: { code?: string; message?: string } }
 
+export type CreateCompanyInput = {
+  legalName: string
+  tradeName: string
+  document: string
+  email: string
+  phone?: string
+  timezone: string
+  currency: string
+  establishment: { name: string; code: string; document?: string; email?: string; phone?: string }
+  owner: { name: string; email: string; password: string }
+}
+
 export class ApiError extends Error {
   status: number
   code: string
@@ -89,4 +101,17 @@ export async function loginRequest(input: { email: string; password: string; com
   const { data } = (await response.json()) as ApiEnvelope<AuthSession>
   saveSession(data)
   return data
+}
+
+export async function createCompanyRequest(input: CreateCompanyInput) {
+  const response = await fetch(`${API_URL}/v1/companies`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(input),
+  })
+  if (!response.ok) {
+    const body = (await response.json().catch(() => ({}))) as ApiErrorBody
+    throw new ApiError(response.status, body.error?.code ?? 'COMPANY_CREATE_FAILED', body.error?.message ?? 'Não foi possível criar a empresa.')
+  }
+  return ((await response.json()) as ApiEnvelope<unknown>).data
 }
