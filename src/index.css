@@ -4,6 +4,7 @@
 @import './admin-actions.css';
 @import './establishment-selection.css';
 @import './order-actions.css';
+@import './reports.css';
 
 :root { font-family: 'DM Sans', sans-serif; color: #20251f; background: #f4f5f0; font-synthesis: none; text-rendering: optimizeLegibility; --ink:#20251f; --muted:#737a70; --line:#e2e5dd; --cream:#f4f5f0; --surface:#fff; --green:#366b4a; --green-dark:#244d35; --lime:#c7e46c; --coral:#e97c5f; --amber:#e5aa4f; }
 * { box-sizing: border-box; }

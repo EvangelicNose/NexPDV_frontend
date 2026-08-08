@@ -4,7 +4,6 @@ import { ProtectedRoute } from './features/auth/ProtectedRoute'
 import { DashboardPage } from './pages/DashboardPage'
 import { CompanyRegistrationPage } from './pages/CompanyRegistrationPage'
 import { LoginPage } from './pages/LoginPage'
-import { ModulePage } from './pages/ModulePage'
 import { OrdersLayout } from './features/orders/OrdersLayout'
 import { OrderDetailsPage } from './pages/orders/OrderDetailsPage'
 import { NewOrderPage } from './pages/orders/NewOrderPage'
@@ -38,6 +37,7 @@ import { AdminCompanyDetailsPage } from './pages/admin/AdminCompanyDetailsPage'
 import { AdminDashboardPage } from './pages/admin/AdminDashboardPage'
 import { NewAdminCompanyPage } from './pages/admin/NewAdminCompanyPage'
 import { EstablishmentSelectionPage } from './pages/EstablishmentSelectionPage'
+import { ReportsPage } from './pages/reports/ReportsPage'
 
 export default function App() {
   return (
@@ -74,7 +74,7 @@ export default function App() {
             <Route path="transferencia" element={<StockTransferPage />} />
           </Route>
           <Route path="estoque/ajuste" element={<StockAdjustmentPage />} />
-          <Route path="relatorios" element={<ModulePage title="Relatórios" description="Indicadores comerciais e operacionais por período." />} />
+          <Route path="relatorios" element={<ReportsPage />} />
           <Route path="equipe" element={<TeamLayout />}>
             <Route index element={<TeamMembersPage />} />
             <Route path="papeis" element={<TeamRolesPage />} />
