@@ -18,8 +18,7 @@ const currency = (value?: string) => Number(value ?? 0).toLocaleString('pt-BR', 
 const paymentNames: Record<string, string> = { CASH: 'Dinheiro', PIX: 'Pix', CREDIT_CARD: 'Crédito', DEBIT_CARD: 'Débito', VOUCHER: 'Voucher', OTHER: 'Outros' }
 
 export function DashboardPage() {
-  const { session } = useAuth()
-  const establishment = session?.establishments[0]
+  const { session, currentEstablishment: establishment } = useAuth()
   const to = new Date(); const from = new Date(); from.setDate(to.getDate() - 6)
   const query = useQuery({
     queryKey: ['overview', establishment?.id, isoDate(from), isoDate(to)],

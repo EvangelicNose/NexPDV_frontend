@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { BarChart3, Boxes, ChevronDown, CircleHelp, ClipboardList, LayoutDashboard, LogOut, Menu, PackageSearch, PanelLeftClose, PanelLeftOpen, Search, Users, WalletCards, X } from 'lucide-react'
+import { BarChart3, Boxes, ChevronDown, CircleHelp, ClipboardList, LayoutDashboard, LogOut, Menu, PackageSearch, PanelLeftClose, PanelLeftOpen, RotateCcw, Search, ShieldCheck, Users, WalletCards, X } from 'lucide-react'
 import { NavLink, Outlet } from 'react-router-dom'
 import { useAuth } from '../../features/auth/auth-context'
 import { Logo } from '../brand/Logo'
@@ -15,10 +15,9 @@ const navigation = [
 ]
 
 export function AppLayout() {
-  const { session, logout } = useAuth()
+  const { session, currentEstablishment, switchEstablishment, exitImpersonation, logout } = useAuth()
   const [collapsed, setCollapsed] = useState(false)
   const [mobileOpen, setMobileOpen] = useState(false)
-  const establishment = session?.establishments[0]
   return <div className={`app-shell ${collapsed ? 'is-collapsed' : ''}`}>
     <aside className={`sidebar ${mobileOpen ? 'is-open' : ''}`}>
       <div className="sidebar-head"><Logo compact={collapsed} /><button className="icon-button mobile-close" onClick={() => setMobileOpen(false)} aria-label="Fechar menu"><X size={20} /></button></div>
@@ -36,9 +35,10 @@ export function AppLayout() {
         <div className="topbar-start">
           <button className="icon-button desktop-menu" onClick={() => setCollapsed((value) => !value)} aria-label="Alternar menu">{collapsed ? <PanelLeftOpen size={20} /> : <PanelLeftClose size={20} />}</button>
           <button className="icon-button mobile-menu" onClick={() => setMobileOpen(true)} aria-label="Abrir menu"><Menu size={21} /></button>
-          <button className="establishment-switcher"><span className="store-indicator" /><span><small>Unidade atual</small>{establishment?.name ?? 'Todas as unidades'}</span><ChevronDown size={16} /></button>
+          <label className="establishment-switcher"><span className="store-indicator" /><span><small>Unidade atual</small><select aria-label="Trocar estabelecimento" value={currentEstablishment?.id ?? ''} onChange={(event) => switchEstablishment(event.target.value)} disabled={!session || session.establishments.length < 2}>{session?.establishments.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</select></span><ChevronDown size={16} /></label>
         </div>
         <div className="topbar-end">
+          {session?.impersonation?.active && <button className="return-admin-button" onClick={() => void exitImpersonation()}><ShieldCheck size={15}/><span>Modo de acesso</span><strong>Voltar ao console</strong><RotateCcw size={14}/></button>}
           <button className="search-button"><Search size={18} /><span>Buscar</span><kbd>⌘ K</kbd></button>
           <div className="user-avatar" title={session?.user.name}>{session?.user.name.split(' ').slice(0, 2).map((part) => part[0]).join('').toUpperCase()}</div>
         </div>

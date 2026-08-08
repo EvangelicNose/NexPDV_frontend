@@ -16,6 +16,28 @@ import { CashOverviewPage } from './pages/cash/CashOverviewPage'
 import { CashRegistersPage } from './pages/cash/CashRegistersPage'
 import { CashSessionDetailsPage } from './pages/cash/CashSessionDetailsPage'
 import { OpenCashPage } from './pages/cash/OpenCashPage'
+import { CatalogLayout } from './features/catalog/CatalogLayout'
+import { CategoriesPage } from './pages/catalog/CategoriesPage'
+import { NewProductPage } from './pages/catalog/NewProductPage'
+import { OptionGroupsPage } from './pages/catalog/OptionGroupsPage'
+import { ProductDetailsPage } from './pages/catalog/ProductDetailsPage'
+import { ProductsPage } from './pages/catalog/ProductsPage'
+import { StockLayout } from './features/stock/StockLayout'
+import { StockAdjustmentPage } from './pages/stock/StockAdjustmentPage'
+import { StockMovementsPage } from './pages/stock/StockMovementsPage'
+import { StockOverviewPage } from './pages/stock/StockOverviewPage'
+import { StockTransferPage } from './pages/stock/StockTransferPage'
+import { TeamLayout } from './features/team/TeamLayout'
+import { TeamMembersPage } from './pages/team/TeamMembersPage'
+import { TeamRolesPage } from './pages/team/TeamRolesPage'
+import { TeamUnitsPage } from './pages/team/TeamUnitsPage'
+import { AdminLayout } from './components/layout/AdminLayout'
+import { AdminOnlyRoute, TenantOnlyRoute } from './features/admin/AdminOnlyRoute'
+import { AdminCompaniesPage } from './pages/admin/AdminCompaniesPage'
+import { AdminCompanyDetailsPage } from './pages/admin/AdminCompanyDetailsPage'
+import { AdminDashboardPage } from './pages/admin/AdminDashboardPage'
+import { NewAdminCompanyPage } from './pages/admin/NewAdminCompanyPage'
+import { EstablishmentSelectionPage } from './pages/EstablishmentSelectionPage'
 
 export default function App() {
   return (
@@ -23,7 +45,8 @@ export default function App() {
       <Route path="/login" element={<LoginPage />} />
       <Route path="/cadastro" element={<CompanyRegistrationPage />} />
       <Route element={<ProtectedRoute />}>
-        <Route element={<AppLayout />}>
+        <Route path="selecionar-unidade" element={<EstablishmentSelectionPage />} />
+        <Route element={<TenantOnlyRoute />}><Route element={<AppLayout />}>
           <Route index element={<DashboardPage />} />
           <Route path="pedidos" element={<OrdersLayout />}>
             <Route index element={<OrdersPage />} />
@@ -38,10 +61,33 @@ export default function App() {
           </Route>
           <Route path="caixa/abrir" element={<OpenCashPage />} />
           <Route path="caixa/sessoes/:id" element={<CashSessionDetailsPage />} />
-          <Route path="catalogo" element={<ModulePage title="Catálogo" description="Produtos, variações, adicionais, preços e disponibilidade." />} />
-          <Route path="estoque" element={<ModulePage title="Estoque" description="Saldos, movimentações, ajustes e alertas de reposição." />} />
+          <Route path="catalogo" element={<CatalogLayout />}>
+            <Route index element={<ProductsPage />} />
+            <Route path="categorias" element={<CategoriesPage />} />
+            <Route path="adicionais" element={<OptionGroupsPage />} />
+          </Route>
+          <Route path="catalogo/novo" element={<NewProductPage />} />
+          <Route path="catalogo/produtos/:id" element={<ProductDetailsPage />} />
+          <Route path="estoque" element={<StockLayout />}>
+            <Route index element={<StockOverviewPage />} />
+            <Route path="movimentacoes" element={<StockMovementsPage />} />
+            <Route path="transferencia" element={<StockTransferPage />} />
+          </Route>
+          <Route path="estoque/ajuste" element={<StockAdjustmentPage />} />
           <Route path="relatorios" element={<ModulePage title="Relatórios" description="Indicadores comerciais e operacionais por período." />} />
-          <Route path="equipe" element={<ModulePage title="Equipe" description="Usuários, unidades, papéis e permissões." />} />
+          <Route path="equipe" element={<TeamLayout />}>
+            <Route index element={<TeamMembersPage />} />
+            <Route path="papeis" element={<TeamRolesPage />} />
+            <Route path="unidades" element={<TeamUnitsPage />} />
+          </Route>
+        </Route></Route>
+        <Route element={<AdminOnlyRoute />}>
+          <Route path="admin" element={<AdminLayout />}>
+            <Route index element={<AdminDashboardPage />} />
+            <Route path="empresas" element={<AdminCompaniesPage />} />
+            <Route path="empresas/nova" element={<NewAdminCompanyPage />} />
+            <Route path="empresas/:companyId" element={<AdminCompanyDetailsPage />} />
+          </Route>
         </Route>
       </Route>
       <Route path="*" element={<Navigate to="/" replace />} />

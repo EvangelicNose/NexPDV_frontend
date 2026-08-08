@@ -3,7 +3,11 @@ import type { AuthSession } from '../../lib/api'
 
 export type AuthContextValue = {
   session: AuthSession | null
-  login: (input: { email: string; password: string; companyId?: string }) => Promise<void>
+  currentEstablishment: AuthSession['establishments'][number] | null
+  switchEstablishment: (establishmentId: string, makeDefault?: boolean) => void
+  login: (input: { email: string; password: string; companyId?: string }) => Promise<AuthSession>
+  connectAs: (companyId: string, userId: string) => Promise<void>
+  exitImpersonation: () => Promise<void>
   logout: () => Promise<void>
 }
 

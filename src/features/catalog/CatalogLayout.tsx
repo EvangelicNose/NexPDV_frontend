@@ -1,0 +1,3 @@
+import { Grid2X2,PackageSearch,Plus,SlidersHorizontal } from 'lucide-react'
+import { NavLink,Outlet } from 'react-router-dom'
+export function CatalogLayout(){return <div className="catalog-module page-enter"><div className="catalog-heading"><div><span className="eyebrow">Cardápio e vendas</span><h1>Catálogo</h1><p>Organize produtos, categorias, preços e adicionais.</p></div><NavLink className="new-order-button" to="/catalogo/novo"><Plus size={18}/> Novo produto</NavLink></div><nav className="orders-tabs"><NavLink to="/catalogo" end><PackageSearch size={16}/> Produtos</NavLink><NavLink to="/catalogo/categorias"><Grid2X2 size={16}/> Categorias</NavLink><NavLink to="/catalogo/adicionais"><SlidersHorizontal size={16}/> Adicionais</NavLink></nav><Outlet/></div>}

@@ -1,5 +1,7 @@
 const API_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:3333'
 const SESSION_KEY = 'nexpdv.session'
+const PLATFORM_ADMIN_SESSION_KEY = 'nexpdv.platform-admin-session'
+const DEFAULT_ESTABLISHMENT_PREFIX = 'nexpdv.default-establishment'
 
 export type AuthSession = {
   accessToken: string
@@ -7,7 +9,10 @@ export type AuthSession = {
   user: { id: string; name: string; email: string }
   company: { id: string; tradeName: string } | null
   establishments: Array<{ id: string; name: string }>
+  activeEstablishmentId?: string
   role: string
+  permissions?: string[]
+  impersonation?: { active: true; platformAdminUserId: string }
 }
 type ApiEnvelope<T> = { data: T; message?: string }
 type ApiErrorBody = { error?: { code?: string; message?: string } }
@@ -50,6 +55,25 @@ export const saveSession = (session: AuthSession | null) => {
   if (session) sessionStorage.setItem(SESSION_KEY, JSON.stringify(session))
   else sessionStorage.removeItem(SESSION_KEY)
 }
+export const readPlatformAdminSession = (): AuthSession | null => {
+  const value = sessionStorage.getItem(PLATFORM_ADMIN_SESSION_KEY)
+  if (!value) return null
+  try { return JSON.parse(value) as AuthSession } catch {
+    sessionStorage.removeItem(PLATFORM_ADMIN_SESSION_KEY)
+    return null
+  }
+}
+export const savePlatformAdminSession = (session: AuthSession | null) => {
+  if (session) sessionStorage.setItem(PLATFORM_ADMIN_SESSION_KEY, JSON.stringify(session))
+  else sessionStorage.removeItem(PLATFORM_ADMIN_SESSION_KEY)
+}
+export const readDefaultEstablishment = (userId: string, companyId: string) =>
+  localStorage.getItem(`${DEFAULT_ESTABLISHMENT_PREFIX}:${userId}:${companyId}`)
+export const saveDefaultEstablishment = (userId: string, companyId: string, establishmentId: string | null) => {
+  const key = `${DEFAULT_ESTABLISHMENT_PREFIX}:${userId}:${companyId}`
+  if (establishmentId) localStorage.setItem(key, establishmentId)
+  else localStorage.removeItem(key)
+}
 
 let refreshing: Promise<AuthSession | null> | null = null
 const renewSession = async () => {
@@ -75,6 +99,7 @@ export async function apiRequest<T>(path: string, init: RequestInit = {}, retry 
   const headers = new Headers(init.headers)
   if (init.body && !headers.has('Content-Type')) headers.set('Content-Type', 'application/json')
   if (session?.accessToken) headers.set('Authorization', `Bearer ${session.accessToken}`)
+  if (session?.company?.id) headers.set('companyId', session.company.id)
   const response = await fetch(`${API_URL}${path}`, { ...init, headers })
   if (response.status === 401 && retry && session?.refreshToken) {
     refreshing ??= renewSession().finally(() => { refreshing = null })
@@ -99,6 +124,7 @@ export async function loginRequest(input: { email: string; password: string; com
     throw new ApiError(response.status, body.error?.code ?? 'LOGIN_FAILED', body.error?.message ?? 'E-mail ou senha inválidos.')
   }
   const { data } = (await response.json()) as ApiEnvelope<AuthSession>
+  console.log(data)
   saveSession(data)
   return data
 }

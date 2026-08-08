@@ -18,9 +18,11 @@ export function LoginPage() {
   const submit = async (event: FormEvent) => {
     event.preventDefault(); setError(''); setLoading(true)
     try {
-      await login({ email, password })
+      const authenticated = await login({ email, password })
       const from = (location.state as { from?: { pathname?: string } } | null)?.from?.pathname
-      navigate(from ?? '/', { replace: true })
+      if (authenticated.role === 'PLATFORM_ADMIN') navigate('/admin', { replace: true })
+      else if (authenticated.activeEstablishmentId) navigate(from ?? '/', { replace: true })
+      else navigate('/selecionar-unidade', { replace: true, state: { from } })
     } catch (reason) {
       setError(reason instanceof ApiError ? reason.message : 'Não foi possível conectar ao servidor.')
     } finally { setLoading(false) }

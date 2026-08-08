@@ -1,0 +1,4 @@
+export type StockItem={id:string;productId:string;productVariantId?:string|null;quantity:string;minimumQuantity?:string|null;updatedAt:string;product:{name:string};productVariant?:{name:string}|null}
+export type StockMovementType='INITIAL'|'PURCHASE'|'SALE'|'CANCELLATION'|'RETURN'|'ADJUSTMENT_IN'|'ADJUSTMENT_OUT'|'TRANSFER_IN'|'TRANSFER_OUT'
+export type StockMovement={id:string;productId:string;productVariantId?:string|null;type:StockMovementType;quantity:string;balanceBefore:string;balanceAfter:string;reason?:string|null;referenceId?:string|null;createdAt:string}
+export const movementTypeLabels:Record<StockMovementType,string>={INITIAL:'Saldo inicial',PURCHASE:'Compra',SALE:'Venda',CANCELLATION:'Cancelamento',RETURN:'Devolução',ADJUSTMENT_IN:'Ajuste de entrada',ADJUSTMENT_OUT:'Ajuste de saída',TRANSFER_IN:'Transferência recebida',TRANSFER_OUT:'Transferência enviada'}

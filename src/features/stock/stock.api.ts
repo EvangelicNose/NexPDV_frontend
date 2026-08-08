@@ -1,0 +1,7 @@
+import { apiRequest } from '../../lib/api'
+import type { StockItem,StockMovement,StockMovementType } from './stock.types'
+export const listStock=(input:{establishmentId:string;lowStock?:boolean;productId?:string})=>{const query=new URLSearchParams({establishmentId:input.establishmentId,limit:'100'});if(input.lowStock!==undefined)query.set('lowStock',String(input.lowStock));if(input.productId)query.set('productId',input.productId);return apiRequest<StockItem[]>(`/v1/stock?${query}`)}
+export const listStockMovements=(input:{establishmentId:string;type?:StockMovementType;productId?:string})=>{const query=new URLSearchParams({establishmentId:input.establishmentId,limit:'100'});if(input.type)query.set('type',input.type);if(input.productId)query.set('productId',input.productId);return apiRequest<StockMovement[]>(`/v1/stock/movements?${query}`)}
+const mutation=<T>(path:string,body:unknown)=>apiRequest<T>(path,{method:'POST',headers:{'Idempotency-Key':crypto.randomUUID()},body:JSON.stringify(body)})
+export const adjustStock=(input:{establishmentId:string;productId:string;productVariantId?:string;newQuantity:number;reason:string})=>mutation<{stockItem:StockItem;movement:StockMovement}>('/v1/stock/adjustments',input)
+export const transferStock=(input:{sourceEstablishmentId:string;destinationEstablishmentId:string;productId:string;productVariantId?:string;quantity:number;reason?:string})=>mutation<{referenceId:string;outgoing:StockMovement;incoming:StockMovement}>('/v1/stock/transfers',input)
