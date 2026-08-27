@@ -23,6 +23,7 @@ import { ProductDetailsPage } from './pages/catalog/ProductDetailsPage'
 import { ProductsPage } from './pages/catalog/ProductsPage'
 import { StockLayout } from './features/stock/StockLayout'
 import { StockAdjustmentPage } from './pages/stock/StockAdjustmentPage'
+import { StockEntryPage } from './pages/stock/StockEntryPage'
 import { StockMovementsPage } from './pages/stock/StockMovementsPage'
 import { StockOverviewPage } from './pages/stock/StockOverviewPage'
 import { StockTransferPage } from './pages/stock/StockTransferPage'
@@ -74,6 +75,7 @@ export default function App() {
             <Route path="transferencia" element={<StockTransferPage />} />
           </Route>
           <Route path="estoque/ajuste" element={<StockAdjustmentPage />} />
+          <Route path="estoque/entrada" element={<StockEntryPage />} />
           <Route path="relatorios" element={<ReportsPage />} />
           <Route path="equipe" element={<TeamLayout />}>
             <Route index element={<TeamMembersPage />} />

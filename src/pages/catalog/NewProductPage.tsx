@@ -44,7 +44,6 @@ export function NewProductPage() {
   })
 
   return <form className="product-editor page-enter" onSubmit={submit} noValidate>
-    {JSON.stringify(session)}
     <Link className="back-link" to="/catalogo"><ArrowLeft size={16} /> Voltar ao catálogo</Link>
     <div className="order-editor-heading"><span className="eyebrow">Cadastro</span><h1>Novo produto</h1><p>Preencha os dados comerciais e configure como o item será vendido.</p></div>
     {errors.root?.serverError && <div className="form-error product-form-error" role="alert">{errors.root.serverError.message}</div>}

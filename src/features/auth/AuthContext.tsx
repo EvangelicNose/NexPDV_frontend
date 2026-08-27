@@ -1,9 +1,16 @@
-import { useMemo, useState, type PropsWithChildren } from 'react'
-import { apiRequest, loginRequest, readDefaultEstablishment, readPlatformAdminSession, readSession, saveDefaultEstablishment, savePlatformAdminSession, saveSession, type AuthSession } from '../../lib/api'
+import { useEffect, useMemo, useState, type PropsWithChildren } from 'react'
+import { AUTH_SESSION_CHANGED_EVENT, apiRequest, loginRequest, readDefaultEstablishment, readPlatformAdminSession, readSession, saveDefaultEstablishment, savePlatformAdminSession, saveSession, type AuthSession } from '../../lib/api'
 import { AuthContext, type AuthContextValue } from './auth-context'
 
 export function AuthProvider({ children }: PropsWithChildren) {
   const [session, setSession] = useState<AuthSession | null>(() => readSession())
+  useEffect(() => {
+    const synchronizeSession = (event: Event) => {
+      setSession((event as CustomEvent<AuthSession | null>).detail)
+    }
+    window.addEventListener(AUTH_SESSION_CHANGED_EVENT, synchronizeSession)
+    return () => window.removeEventListener(AUTH_SESSION_CHANGED_EVENT, synchronizeSession)
+  }, [])
   const currentEstablishment = session?.establishments.find((item) => item.id === session.activeEstablishmentId) ?? session?.establishments[0] ?? null
   const value = useMemo<AuthContextValue>(() => ({
     session,
@@ -43,10 +50,17 @@ export function AuthProvider({ children }: PropsWithChildren) {
     exitImpersonation: async () => {
       const platformSession = readPlatformAdminSession()
       if (!platformSession) return
-      try { await apiRequest<void>('/v1/auth/logout', { method: 'POST' }) } finally {
-        saveSession(platformSession)
+      try {
+        const tokens = await apiRequest<Pick<AuthSession, 'accessToken'>>('/v1/auth/impersonation/exit', { method: 'POST' })
+        const restored = { ...platformSession, ...tokens }
+        saveSession(restored)
         savePlatformAdminSession(null)
-        setSession(platformSession)
+        setSession(restored)
+      } catch (error) {
+        saveSession(null)
+        savePlatformAdminSession(null)
+        setSession(null)
+        throw error
       }
     },
     logout: async () => {
