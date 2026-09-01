@@ -9,7 +9,7 @@ const localIso = (date: Date) => `${date.getFullYear()}-${String(date.getMonth()
 const initialPeriod = () => { const to = new Date(); const from = new Date(); from.setDate(to.getDate() - 29); return { from: localIso(from), to: localIso(to) } }
 const money = (value?: string) => Number(value ?? 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
 const number = (value?: string | number) => Number(value ?? 0).toLocaleString('pt-BR', { maximumFractionDigits: 3 })
-const paymentNames: Record<string, string> = { CASH: 'Dinheiro', PIX: 'Pix', CREDIT_CARD: 'Crédito', DEBIT_CARD: 'Débito', VOUCHER: 'Voucher', OTHER: 'Outros' }
+const paymentNames: Record<string, string> = { CASH: 'Dinheiro', PIX: 'Pix', CREDIT_CARD: 'Crédito à vista', CREDIT_CARD_INSTALLMENT: 'Crédito parcelado', DEBIT_CARD: 'Débito', VOUCHER: 'Voucher', OTHER: 'Outros' }
 const movementNames: Record<string, string> = { INITIAL: 'Saldo inicial', PURCHASE: 'Compra', SALE: 'Venda', RETURN: 'Devolução', LOSS: 'Perda', ADJUSTMENT: 'Ajuste', TRANSFER_IN: 'Transferência recebida', TRANSFER_OUT: 'Transferência enviada' }
 
 export function ReportsPage() {

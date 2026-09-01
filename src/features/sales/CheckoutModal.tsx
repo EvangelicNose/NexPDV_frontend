@@ -16,7 +16,6 @@ type PaymentDraft = {
   providerReference: string
 }
 
-const methods = Object.keys(paymentMethodLabels) as PaymentMethod[]
 const money = (value: number) => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value)
 const parseMoney = (value: string) => {
   const compact = value.trim().replace(/\s/g, '')
@@ -70,8 +69,15 @@ export function CheckoutModal({ orderId, total, onClose, onSuccess }: { orderId:
       setValidationError('A soma dos pagamentos precisa ser exatamente igual ao total do pedido.')
       return
     }
-    if (payments.some(payment => payment.method === 'CASH' && !payment.cashRegisterSessionId)) {
-      setValidationError('Selecione um caixa aberto para o pagamento em dinheiro.')
+    if (payments.some(payment => !payment.cashRegisterSessionId)) {
+      setValidationError('Selecione um caixa aberto para todos os pagamentos.')
+      return
+    }
+    if (payments.some(payment => {
+      const session = cashSessions.data?.find(item => item.id === payment.cashRegisterSessionId)
+      return !(session?.cashRegister.paymentMethods ?? []).some(item => item.method === payment.method)
+    })) {
+      setValidationError('Selecione um meio de pagamento configurado no caixa informado.')
       return
     }
     if (payments.some(payment => payment.method === 'CASH' && (
@@ -84,7 +90,7 @@ export function CheckoutModal({ orderId, total, onClose, onSuccess }: { orderId:
     mutation.mutate(payments.map(payment => ({
       method: payment.method,
       amount: parseMoney(payment.amount)!.toFixed(2),
-      ...(payment.method === 'CASH' && { cashRegisterSessionId: payment.cashRegisterSessionId }),
+      cashRegisterSessionId: payment.cashRegisterSessionId,
       ...(payment.providerReference.trim() && { providerReference: payment.providerReference.trim() }),
     })))
   }
@@ -103,13 +109,17 @@ export function CheckoutModal({ orderId, total, onClose, onSuccess }: { orderId:
             const cashAmount = parseMoney(payment.amount) ?? 0
             const received = parseMoney(payment.receivedAmount)
             const change = received === null ? null : Math.round((received - cashAmount) * 100) / 100
+            const session = cashSessions.data?.find(item => item.id === payment.cashRegisterSessionId)
+            const methods = session?.cashRegister.paymentMethods ?? []
             return <article key={payment.key}>
             <div className="checkout-payment-number"><span>{payment.method === 'CASH' ? <Banknote size={17}/> : <CreditCard size={17}/>}</span><strong>Pagamento {index + 1}</strong>{payments.length > 1 && <button type="button" onClick={() => removePayment(payment.key)} aria-label="Remover pagamento"><Trash2 size={15}/></button>}</div>
             <div className="checkout-fields">
-              <label><span>Forma</span><select value={payment.method} onChange={event => { const method = event.target.value as PaymentMethod; update(payment.key, { method, cashRegisterSessionId: '', receivedAmount: method === 'CASH' ? payment.amount : '' }) }}>{methods.map(method => <option value={method} key={method}>{paymentMethodLabels[method]}</option>)}</select></label>
+              <label><span>Caixa aberto</span><select value={payment.cashRegisterSessionId} onChange={event => { const selected = cashSessions.data?.find(item => item.id === event.target.value); const method = (selected?.cashRegister.paymentMethods ?? [])[0]?.method ?? 'PIX'; update(payment.key, { cashRegisterSessionId: event.target.value, method, receivedAmount: method === 'CASH' ? payment.amount : '' }) }}><option value="">Selecione o caixa</option>{(cashSessions.data ?? []).map(session => <option value={session.id} key={session.id}>{session.cashRegister.name} · {session.cashRegister.code}</option>)}</select></label>
+              <label><span>Forma</span><select value={payment.method} disabled={!payment.cashRegisterSessionId || !methods.length} onChange={event => { const method = event.target.value as PaymentMethod; update(payment.key, { method, receivedAmount: method === 'CASH' ? payment.amount : '' }) }}>{methods.map(item => <option value={item.method} key={item.method}>{paymentMethodLabels[item.method]}{item.operationFeePercent != null ? ` · taxa ${Number(item.operationFeePercent).toLocaleString('pt-BR')}%` : ''}</option>)}</select></label>
               <label><span>Valor a cobrar</span><div className="checkout-money"><span>R$</span><input inputMode="decimal" value={payment.amount} onChange={event => update(payment.key, { amount: event.target.value })}/></div></label>
               {payment.method === 'CASH' && <div className="checkout-cash-received checkout-wide"><label><span>Valor recebido</span><div className="checkout-money"><span>R$</span><input inputMode="decimal" autoComplete="off" value={payment.receivedAmount} onChange={event => update(payment.key, { receivedAmount: event.target.value })} placeholder="0,00"/></div></label><div className={`checkout-change ${change != null && change >= 0 ? 'valid' : 'invalid'}`}><span>Troco</span><strong>{change == null || change < 0 ? '—' : money(change)}</strong>{change != null && change < 0 && <small>Valor recebido insuficiente</small>}</div></div>}
-              {payment.method === 'CASH' && <label className="checkout-wide"><span>Caixa aberto</span><select value={payment.cashRegisterSessionId} onChange={event => update(payment.key, { cashRegisterSessionId: event.target.value })}><option value="">Selecione o caixa</option>{(cashSessions.data ?? []).map(session => <option value={session.id} key={session.id}>{session.cashRegister.name} · {session.cashRegister.code}</option>)}</select>{!cashSessions.isLoading && !cashSessions.data?.length && <small>Nenhum caixa aberto nesta unidade.</small>}</label>}
+              {!cashSessions.isLoading && !cashSessions.data?.length && <small className="checkout-wide">Nenhum caixa aberto nesta unidade.</small>}
+              {payment.cashRegisterSessionId && !methods.length && <small className="checkout-wide">Este terminal não possui meios de pagamento configurados.</small>}
               {payment.method !== 'CASH' && <label className="checkout-wide"><span>Referência <small>Opcional</small></span><input value={payment.providerReference} onChange={event => update(payment.key, { providerReference: event.target.value })} placeholder="Ex.: NSU, código Pix ou autorização"/></label>}
             </div>
           </article>})}
