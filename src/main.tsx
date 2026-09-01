@@ -16,7 +16,7 @@ createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <QueryClientProvider client={queryClient}>
       {/* Using HashRouter for routing on GHPages. TODO: Switch to BrowserRouter for other environments */}
-     <HashRouter basename={import.meta.env.BASE_URL}>
+     <HashRouter>
         <AuthProvider>
           <App />
         </AuthProvider>
