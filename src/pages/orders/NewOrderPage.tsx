@@ -6,10 +6,13 @@ import {
   LoaderCircle,
   MapPin,
   PackageSearch,
+  Pencil,
   Plus,
+  Search,
   ShoppingBasket,
   Trash2,
   UserRound,
+  X,
   Zap,
 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
@@ -34,6 +37,18 @@ const parsePaymentAmount = (value: string) => {
   const normalized = value.trim().replace(/\./g, "").replace(",", ".");
   return /^\d+(\.\d{1,2})?$/.test(normalized) ? Number(normalized) : NaN;
 };
+type ItemDraft = {
+  productId: string;
+  productVariantId: string;
+  quantity: string;
+  notes: string;
+};
+const emptyItemDraft = (): ItemDraft => ({
+  productId: "",
+  productVariantId: "",
+  quantity: "1",
+  notes: "",
+});
 export function NewOrderPage() {
   const { currentEstablishment } = useAuth();
   const establishmentId = currentEstablishment?.id;
@@ -61,12 +76,18 @@ export function NewOrderPage() {
   });
   const [quickSaleError, setQuickSaleError] = useState("");
   const [completedQuickSale, setCompletedQuickSale] = useState<{ orderId: string; sequence: number } | null>(null);
+  const [productModalOpen, setProductModalOpen] = useState(false);
+  const [productSearch, setProductSearch] = useState("");
+  const [editingItemIndex, setEditingItemIndex] = useState<number | null>(null);
+  const [itemDraft, setItemDraft] = useState<ItemDraft>(emptyItemDraft);
+  const [itemDraftError, setItemDraftError] = useState("");
   const {
     register,
     control,
     handleSubmit,
     reset,
     setValue,
+    clearErrors,
     formState: { errors, isSubmitting },
   } = useForm<OrderForm>({
     resolver: zodResolver(orderFormSchema),
@@ -80,12 +101,10 @@ export function NewOrderPage() {
       neighborhood: "",
       city: "",
       notes: "",
-      items: [
-        { productId: "", productVariantId: "", quantity: "1", notes: "" },
-      ],
+      items: [],
     },
   });
-  const { fields, append, remove } = useFieldArray({ control, name: "items" });
+  const { fields, append, remove, update } = useFieldArray({ control, name: "items" });
   const type = useWatch({ control, name: "type" });
   const items = useWatch({ control, name: "items" });
   const quickSaleAvailable = type === "COUNTER" || type === "TAKEAWAY";
@@ -108,6 +127,52 @@ export function NewOrderPage() {
     () => selectedCashSession?.cashRegister.paymentMethods ?? [],
     [selectedCashSession],
   );
+  const filteredProducts = useMemo(() => {
+    const term = productSearch.trim().toLocaleLowerCase("pt-BR");
+    if (!term) return products.data ?? [];
+    return (products.data ?? []).filter((product) =>
+      [product.name, product.sku, product.category?.name]
+        .filter(Boolean)
+        .some((value) => value!.toLocaleLowerCase("pt-BR").includes(term)),
+    );
+  }, [productSearch, products.data]);
+  const draftProduct = products.data?.find((product) => product.id === itemDraft.productId);
+  const openNewProductModal = () => {
+    setEditingItemIndex(null);
+    setItemDraft(emptyItemDraft());
+    setProductSearch("");
+    setItemDraftError("");
+    setProductModalOpen(true);
+  };
+  const openEditProductModal = (index: number) => {
+    const item = items?.[index];
+    if (!item) return;
+    setEditingItemIndex(index);
+    setItemDraft({ ...item });
+    setProductSearch("");
+    setItemDraftError("");
+    setProductModalOpen(true);
+  };
+  const closeProductModal = () => {
+    setProductModalOpen(false);
+    setItemDraftError("");
+  };
+  const saveProductItem = () => {
+    if (!itemDraft.productId) {
+      setItemDraftError("Selecione um produto para adicionar ao pedido.");
+      return;
+    }
+    const normalizedQuantity = itemDraft.quantity.trim().replace(",", ".");
+    if (!/^\d{1,8}(\.\d{1,3})?$/.test(normalizedQuantity) || Number(normalizedQuantity) <= 0) {
+      setItemDraftError("Informe uma quantidade válida e maior que zero.");
+      return;
+    }
+    const nextItem = { ...itemDraft, quantity: itemDraft.quantity.trim() };
+    if (editingItemIndex === null) append(nextItem);
+    else update(editingItemIndex, nextItem);
+    clearErrors("items");
+    closeProductModal();
+  };
   useEffect(() => {
     if (quickSaleAvailable) return;
     setQuickSale(false);
@@ -217,7 +282,7 @@ export function NewOrderPage() {
       neighborhood: "",
       city: "",
       notes: "",
-      items: [{ productId: "", productVariantId: "", quantity: "1", notes: "" }],
+      items: [],
     });
     setQuickPayment((current) => ({ ...current, receivedAmount: "" }));
     setQuickSaleError("");
@@ -426,99 +491,46 @@ export function NewOrderPage() {
                 <small>Itens e variações do catálogo</small>
               </div>
             </header>
-            <div className="order-items-form">
+            <div className="order-product-cards">
               {fields.map((field, index) => {
                 const product = products.data?.find(
                   (item) => item.id === items?.[index]?.productId,
                 );
+                const variant = product?.variants.find(
+                  (item) => item.id === items?.[index]?.productVariantId,
+                );
+                const itemTotal =
+                  (Number(product?.basePrice ?? 0) + Number(variant?.priceAdjustment ?? 0)) *
+                  Number(items?.[index]?.quantity.replace(",", ".") || 0);
                 return (
-                  <article key={field.id}>
-                    <div className="item-line">
-                      <label className="builder-field">
-                        Produto
-                        <select
-                          {...register(`items.${index}.productId`)}
-                          onChange={(event) => {
-                            setValue(
-                              `items.${index}.productId`,
-                              event.target.value,
-                              { shouldValidate: true },
-                            );
-                            setValue(`items.${index}.productVariantId`, "");
-                          }}
-                        >
-                          <option value="">Selecione o produto</option>
-                          {(products.data ?? []).map((item) => (
-                            <option value={item.id} key={item.id}>
-                              {item.name} · {money(Number(item.basePrice))}
-                            </option>
-                          ))}
-                        </select>
-                        <FieldError
-                          message={errors.items?.[index]?.productId?.message}
-                        />
-                      </label>
-                      <label className="builder-field">
-                        Variação
-                        <select
-                          {...register(`items.${index}.productVariantId`)}
-                          disabled={!product?.variants.length}
-                        >
-                          <option value="">Padrão</option>
-                          {product?.variants
-                            .filter((item) => item.active)
-                            .map((item) => (
-                              <option value={item.id} key={item.id}>
-                                {item.name} (
-                                {Number(item.priceAdjustment) >= 0 ? "+ " : ""}
-                                {money(Number(item.priceAdjustment))})
-                              </option>
-                            ))}
-                        </select>
-                      </label>
-                      <label className="builder-field quantity-field">
-                        Quantidade
-                        <input
-                          {...register(`items.${index}.quantity`)}
-                          inputMode="decimal"
-                        />
-                        <FieldError
-                          message={errors.items?.[index]?.quantity?.message}
-                        />
-                      </label>
-                      <button
-                        type="button"
-                        className="remove-item"
-                        onClick={() => remove(index)}
-                        disabled={fields.length === 1}
-                      >
-                        <Trash2 size={17} />
-                      </button>
+                  <article className="order-product-card" key={field.id}>
+                    <span className="order-product-card-icon"><PackageSearch size={20} /></span>
+                    <div className="order-product-card-copy">
+                      <strong>{product?.name ?? "Produto indisponível"}</strong>
+                      <small>{variant?.name ?? "Padrão"}{items?.[index]?.notes ? ` · ${items[index].notes}` : ""}</small>
                     </div>
-                    <label className="builder-field">
-                      Observação do item <small>Opcional</small>
-                      <input
-                        {...register(`items.${index}.notes`)}
-                        placeholder="Ex.: sem cebola"
-                      />
-                    </label>
+                    <span className="order-product-card-quantity">{items?.[index]?.quantity}×</span>
+                    <strong className="order-product-card-price">{money(itemTotal)}</strong>
+                    <button type="button" className="edit-product-item" onClick={() => openEditProductModal(index)} aria-label={`Editar ${product?.name ?? "produto"}`}><Pencil size={15} /></button>
+                    <button type="button" className="remove-product-item" onClick={() => remove(index)} aria-label={`Remover ${product?.name ?? "produto"}`}><Trash2 size={16} /></button>
                   </article>
                 );
               })}
+              {!fields.length && (
+                <div className="order-products-empty">
+                  <ShoppingBasket size={26} />
+                  <strong>Nenhum produto adicionado</strong>
+                  <span>Use o botão abaixo para montar o pedido.</span>
+                </div>
+              )}
             </div>
+            <FieldError message={errors.items?.message} />
             <button
               type="button"
               className="add-item-button"
-              onClick={() =>
-                append({
-                  productId: "",
-                  productVariantId: "",
-                  quantity: "1",
-                  notes: "",
-                })
-              }
+              onClick={openNewProductModal}
             >
-              <Plus size={16} /> Adicionar outro item
+              <Plus size={16} /> Adicionar novo produto
             </button>
           </section>
           <label className="builder-field order-notes-field">
@@ -596,6 +608,72 @@ export function NewOrderPage() {
         </aside>
       </div>
     </form>
+    {productModalOpen && (
+      <div className="product-picker-backdrop" role="presentation" onMouseDown={closeProductModal}>
+        <section className="product-picker-modal" role="dialog" aria-modal="true" aria-labelledby="product-picker-title" onMouseDown={(event) => event.stopPropagation()}>
+          <header>
+            <span><PackageSearch size={21} /></span>
+            <div>
+              <h2 id="product-picker-title">{editingItemIndex === null ? "Adicionar novo produto" : "Editar produto"}</h2>
+              <p>Escolha um item do catálogo e configure os detalhes.</p>
+            </div>
+            <button type="button" onClick={closeProductModal} aria-label="Fechar"><X size={19} /></button>
+          </header>
+          <div className="product-picker-body">
+            <label className="product-picker-search">
+              <Search size={17} />
+              <input autoFocus value={productSearch} onChange={(event) => setProductSearch(event.target.value)} placeholder="Pesquisar por nome, SKU ou categoria" />
+            </label>
+            <div className="product-picker-list">
+              {products.isLoading && <div className="product-picker-status"><LoaderCircle className="spin" size={20} /> Carregando produtos...</div>}
+              {!products.isLoading && filteredProducts.map((product) => (
+                <button
+                  type="button"
+                  className={itemDraft.productId === product.id ? "selected" : ""}
+                  key={product.id}
+                  onClick={() => {
+                    setItemDraft({ ...itemDraft, productId: product.id, productVariantId: "" });
+                    setItemDraftError("");
+                  }}
+                >
+                  <span><PackageSearch size={18} /></span>
+                  <div><strong>{product.name}</strong><small>{product.category?.name ?? product.sku ?? "Sem categoria"}</small></div>
+                  <b>{money(Number(product.basePrice))}</b>
+                  <i aria-hidden="true" />
+                </button>
+              ))}
+              {!products.isLoading && !filteredProducts.length && <div className="product-picker-status">Nenhum produto encontrado.</div>}
+            </div>
+            <div className="product-picker-fields">
+              <label className="builder-field">
+                Variação
+                <select value={itemDraft.productVariantId} disabled={!draftProduct?.variants.some((variant) => variant.active)} onChange={(event) => setItemDraft({ ...itemDraft, productVariantId: event.target.value })}>
+                  <option value="">Padrão</option>
+                  {draftProduct?.variants.filter((variant) => variant.active).map((variant) => (
+                    <option value={variant.id} key={variant.id}>{variant.name} ({Number(variant.priceAdjustment) >= 0 ? "+ " : ""}{money(Number(variant.priceAdjustment))})</option>
+                  ))}
+                </select>
+              </label>
+              <label className="builder-field product-picker-notes">
+                Observação <small>Opcional</small>
+                <input value={itemDraft.notes} maxLength={500} onChange={(event) => setItemDraft({ ...itemDraft, notes: event.target.value })} placeholder="Ex.: sem cebola" />
+              </label>
+              <label className="builder-field">
+                Quantidade
+                <input value={itemDraft.quantity} inputMode="decimal" onChange={(event) => { setItemDraft({ ...itemDraft, quantity: event.target.value }); setItemDraftError(""); }} />
+              </label>
+            </div>
+            {itemDraftError && <div className="form-error" role="alert">{itemDraftError}</div>}
+          </div>
+          <footer>
+            <button type="button" className="secondary-button" onClick={closeProductModal}>Cancelar</button>
+            <button type="button" className="primary-button" onClick={saveProductItem} disabled={!itemDraft.productId}>
+              <Plus size={17} /> {editingItemIndex === null ? "Adicionar ao pedido" : "Salvar alterações"}
+            </button>
+          </footer>
+        </section>
+      </div>
+    )}
     {completedQuickSale && (
       <div className="quick-sale-success-backdrop" role="presentation">
         <section className="quick-sale-success-modal" role="dialog" aria-modal="true" aria-labelledby="quick-sale-success-title">
