@@ -3,7 +3,7 @@ import react from '@vitejs/plugin-react'
 
 const isProduction = process.env.NODE_ENV === 'production'
 
-const basePath = isProduction ? '/NexPDV_frontend/' : '/'
+const basePath = '/'
 
 // https://vite.dev/config/
 export default defineConfig({
