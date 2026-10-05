@@ -1,0 +1,33 @@
+trigger:
+  branches:
+    include:
+      - main
+
+pool:
+  vmImage: ubuntu-latest
+
+steps:
+  - checkout: self
+
+  - task: NodeTool@0
+    displayName: 'Configurar Node.js'
+    inputs:
+      versionSpec: '22.x'
+
+  - script: npm ci
+    displayName: 'Instalar dependências'
+
+  - script: npm run build
+    displayName: 'Gerar build de produção'
+    env:
+      VITE_API_URL: $(VITE_API_URL)
+
+  - task: AzureStaticWebApp@0
+    displayName: 'Publicar NexPDV'
+    inputs:
+      app_location: 'dist'
+      output_location: ''
+      api_location: ''
+      skip_app_build: true
+      skip_api_build: true
+      azure_static_web_apps_api_token: $(SWA_DEPLOYMENT_TOKEN)
