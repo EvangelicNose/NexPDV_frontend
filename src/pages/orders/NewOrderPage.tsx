@@ -15,11 +15,13 @@ import {
   X,
   Zap,
 } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useFieldArray, useForm, useWatch } from "react-hook-form";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../../features/auth/auth-context";
 import { listProducts } from "../../features/catalog/catalog.api";
+import type { Product } from "../../features/catalog/catalog.types";
+import "../../features/orders/order-catalog.css";
 import { listCashSessions } from "../../features/cash/cash.api";
 import {
   orderFormSchema,
@@ -27,7 +29,10 @@ import {
 } from "../../features/orders/order-form.schema";
 import { createOrder, listOpenTabs } from "../../features/orders/orders.api";
 import { createQuickSale } from "../../features/sales/sales.api";
-import { paymentMethodLabels, type PaymentMethod } from "../../features/sales/sales.types";
+import {
+  paymentMethodLabels,
+  type PaymentMethod,
+} from "../../features/sales/sales.types";
 import { ApiError } from "../../lib/api";
 const money = (value: number) =>
   new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(
@@ -75,8 +80,12 @@ export function NewOrderPage() {
     cashRegisterSessionId: "",
   });
   const [quickSaleError, setQuickSaleError] = useState("");
-  const [completedQuickSale, setCompletedQuickSale] = useState<{ orderId: string; sequence: number } | null>(null);
+  const [completedQuickSale, setCompletedQuickSale] = useState<{
+    orderId: string;
+    sequence: number;
+  } | null>(null);
   const [productModalOpen, setProductModalOpen] = useState(false);
+  const productDialogRef = useRef<HTMLElement>(null);
   const [productSearch, setProductSearch] = useState("");
   const [editingItemIndex, setEditingItemIndex] = useState<number | null>(null);
   const [itemDraft, setItemDraft] = useState<ItemDraft>(emptyItemDraft);
@@ -86,7 +95,7 @@ export function NewOrderPage() {
     control,
     handleSubmit,
     reset,
-    setValue,
+    setError,
     clearErrors,
     formState: { errors, isSubmitting },
   } = useForm<OrderForm>({
@@ -104,7 +113,10 @@ export function NewOrderPage() {
       items: [],
     },
   });
-  const { fields, append, remove, update } = useFieldArray({ control, name: "items" });
+  const { fields, append, remove, update } = useFieldArray({
+    control,
+    name: "items",
+  });
   const type = useWatch({ control, name: "type" });
   const items = useWatch({ control, name: "items" });
   const quickSaleAvailable = type === "COUNTER" || type === "TAKEAWAY";
@@ -136,11 +148,34 @@ export function NewOrderPage() {
         .some((value) => value!.toLocaleLowerCase("pt-BR").includes(term)),
     );
   }, [productSearch, products.data]);
-  const draftProduct = products.data?.find((product) => product.id === itemDraft.productId);
-  const openNewProductModal = () => {
+  const draftProduct = products.data?.find(
+    (product) => product.id === itemDraft.productId,
+  );
+  const addToCart = (item: ItemDraft) => {
+    const index = (items ?? []).findIndex(
+      (entry) =>
+        entry.productId === item.productId &&
+        entry.productVariantId === item.productVariantId &&
+        entry.notes === item.notes,
+    );
+    if (index >= 0) {
+      update(index, {
+        ...items[index],
+        quantity: String(
+          Number(items[index].quantity.replace(",", ".")) +
+            Number(item.quantity.replace(",", ".")),
+        ),
+      });
+    } else append(item);
+    clearErrors("items");
+  };
+  const selectProduct = (product: Product) => {
+    if (!product.variants.some((variant) => variant.active)) {
+      addToCart({ ...emptyItemDraft(), productId: product.id });
+      return;
+    }
     setEditingItemIndex(null);
-    setItemDraft(emptyItemDraft());
-    setProductSearch("");
+    setItemDraft({ ...emptyItemDraft(), productId: product.id });
     setItemDraftError("");
     setProductModalOpen(true);
   };
@@ -149,7 +184,6 @@ export function NewOrderPage() {
     if (!item) return;
     setEditingItemIndex(index);
     setItemDraft({ ...item });
-    setProductSearch("");
     setItemDraftError("");
     setProductModalOpen(true);
   };
@@ -162,25 +196,82 @@ export function NewOrderPage() {
       setItemDraftError("Selecione um produto para adicionar ao pedido.");
       return;
     }
+    if (
+      draftProduct?.variants.some((variant) => variant.active) &&
+      !draftProduct.variants.some(
+        (variant) =>
+          variant.active && variant.id === itemDraft.productVariantId,
+      )
+    ) {
+      setItemDraftError("Selecione uma variação disponível.");
+      return;
+    }
     const normalizedQuantity = itemDraft.quantity.trim().replace(",", ".");
-    if (!/^\d{1,8}(\.\d{1,3})?$/.test(normalizedQuantity) || Number(normalizedQuantity) <= 0) {
+    if (
+      !/^\d{1,8}(\.\d{1,3})?$/.test(normalizedQuantity) ||
+      Number(normalizedQuantity) <= 0
+    ) {
       setItemDraftError("Informe uma quantidade válida e maior que zero.");
       return;
     }
     const nextItem = { ...itemDraft, quantity: itemDraft.quantity.trim() };
-    if (editingItemIndex === null) append(nextItem);
+    if (editingItemIndex === null) addToCart(nextItem);
     else update(editingItemIndex, nextItem);
     clearErrors("items");
     closeProductModal();
   };
+  useEffect(() => {
+    if (!productModalOpen) return;
+    const previousFocus = document.activeElement as HTMLElement | null;
+    const dialog = productDialogRef.current;
+    const focusable = () =>
+      Array.from(
+        dialog?.querySelectorAll<HTMLElement>(
+          'button:not(:disabled), input:not(:disabled), select:not(:disabled), textarea:not(:disabled), [tabindex="0"]',
+        ) ?? [],
+      );
+    (
+      dialog?.querySelector<HTMLElement>(
+        "select:not(:disabled), input:not(:disabled)",
+      ) ?? focusable()[0]
+    )?.focus();
+    const trapFocus = (event: KeyboardEvent) => {
+      if (event.key !== "Tab") return;
+      const elements = focusable();
+      const first = elements[0];
+      const last = elements[elements.length - 1];
+      if (event.shiftKey && document.activeElement === first) {
+        event.preventDefault();
+        last?.focus();
+      } else if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault();
+        first?.focus();
+      }
+    };
+    dialog?.addEventListener("keydown", trapFocus);
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      dialog?.removeEventListener("keydown", trapFocus);
+      document.body.style.overflow = previousOverflow;
+      previousFocus?.focus();
+    };
+  }, [productModalOpen]);
   useEffect(() => {
     if (quickSaleAvailable) return;
     setQuickSale(false);
     setQuickSaleError("");
   }, [quickSaleAvailable]);
   useEffect(() => {
-    if (quickPayment.method && configuredMethods.some((item) => item.method === quickPayment.method)) return;
-    setQuickPayment((current) => ({ ...current, method: configuredMethods[0]?.method ?? "" }));
+    if (
+      quickPayment.method &&
+      configuredMethods.some((item) => item.method === quickPayment.method)
+    )
+      return;
+    setQuickPayment((current) => ({
+      ...current,
+      method: configuredMethods[0]?.method ?? "",
+    }));
   }, [configuredMethods, quickPayment.method]);
   const submit = handleSubmit(async (values) => {
     if (!establishmentId) return;
@@ -192,13 +283,19 @@ export function NewOrderPage() {
           return;
         }
         if (!quickPayment.method) {
-          setQuickSaleError("Selecione um meio de pagamento configurado no terminal.");
+          setQuickSaleError(
+            "Selecione um meio de pagamento configurado no terminal.",
+          );
           return;
         }
         if (quickPayment.method === "CASH") {
-          const receivedAmount = parsePaymentAmount(quickPayment.receivedAmount);
+          const receivedAmount = parsePaymentAmount(
+            quickPayment.receivedAmount,
+          );
           if (!Number.isFinite(receivedAmount) || receivedAmount < total) {
-            setQuickSaleError("O valor recebido em dinheiro deve ser igual ou maior que o total da venda.");
+            setQuickSaleError(
+              "O valor recebido em dinheiro deve ser igual ou maior que o total da venda.",
+            );
             return;
           }
         }
@@ -206,16 +303,20 @@ export function NewOrderPage() {
           establishmentId,
           items: values.items.map((item) => ({
             productId: item.productId,
-            ...(item.productVariantId && { productVariantId: item.productVariantId }),
+            ...(item.productVariantId && {
+              productVariantId: item.productVariantId,
+            }),
             quantity: Number(item.quantity.replace(",", ".")),
             options: [],
             discount: 0,
           })),
-          payments: [{
-            method: quickPayment.method,
-            amount: total.toFixed(2),
-            cashRegisterSessionId: quickPayment.cashRegisterSessionId,
-          }],
+          payments: [
+            {
+              method: quickPayment.method,
+              amount: total.toFixed(2),
+              cashRegisterSessionId: quickPayment.cashRegisterSessionId,
+            },
+          ],
           discount: 0,
           fees: 0,
         });
@@ -224,7 +325,10 @@ export function NewOrderPage() {
           client.invalidateQueries({ queryKey: ["cash-sessions"] }),
           client.invalidateQueries({ queryKey: ["stock"] }),
         ]);
-        setCompletedQuickSale({ orderId: sale.orderId, sequence: sale.sequence });
+        setCompletedQuickSale({
+          orderId: sale.orderId,
+          sequence: sale.sequence,
+        });
         return;
       }
       const order = await createOrder({
@@ -262,7 +366,7 @@ export function NewOrderPage() {
       await client.invalidateQueries({ queryKey: ["orders"] });
       navigate(`/pedidos/${order.id}`, { replace: true });
     } catch (reason) {
-      setValue("root.serverError", {
+      setError("root.serverError", {
         type: "server",
         message:
           reason instanceof ApiError
@@ -290,206 +394,326 @@ export function NewOrderPage() {
   };
   return (
     <>
-    <form className="order-editor page-enter" onSubmit={submit} noValidate>
-      <Link className="back-link" to="/pedidos">
-        <ArrowLeft size={16} /> Voltar aos pedidos
-      </Link>
-      <div className="order-editor-heading">
-        <span className="eyebrow">Novo atendimento</span>
-        <h1>Novo pedido</h1>
-        <p>Monte o pedido e revise os valores antes de confirmar.</p>
-      </div>
-      {(errors.root?.serverError || quickSaleError) && (
-        <div className="form-error" role="alert">
-          {errors.root?.serverError?.message || quickSaleError}
+      <form className="order-editor page-enter" onSubmit={submit} noValidate>
+        <Link className="back-link" to="/pedidos">
+          <ArrowLeft size={16} /> Voltar aos pedidos
+        </Link>
+        <div className="order-editor-heading">
+          <span className="eyebrow">Novo atendimento</span>
+          <h1>Novo pedido</h1>
+          <p>Monte o pedido e revise os valores antes de confirmar.</p>
         </div>
-      )}
-      <div className="order-editor-grid">
-        <div className="order-builder">
-          <section>
-            <header>
-              <span>
-                <UserRound size={18} />
-              </span>
-              <div>
-                <strong>1. Atendimento</strong>
-                <small>Canal, cliente, mesa ou endereço</small>
-              </div>
-            </header>
-            <div className="order-type-options">
-              {(["DINE_IN", "COUNTER", "TAKEAWAY", "DELIVERY"] as const).map(
-                (value) => (
-                  <label
-                    className={type === value ? "selected" : ""}
-                    key={value}
-                  >
-                    <input type="radio" value={value} {...register("type")} />
-                    {value === "DINE_IN"
-                      ? "Salão"
-                      : value === "COUNTER"
-                        ? "Balcão"
-                        : value === "TAKEAWAY"
-                          ? "Retirada"
-                          : "Delivery"}
-                  </label>
-                ),
-              )}
-            </div>
-            {type === "DINE_IN" && (
-              <label className="builder-field">
-                Comanda aberta
-                <select {...register("tabId")}>
-                  <option value="">Selecione uma comanda</option>
-                  {(tabs.data ?? []).map((tab) => (
-                    <option value={tab.id} key={tab.id}>
-                      {tab.label || `Comanda ${tab.id.slice(0, 8)}`}
-                      {tab.table?.number ? ` · Mesa ${tab.table.number}` : ""}
-                    </option>
-                  ))}
-                </select>
-                <FieldError message={errors.tabId?.message} />
-              </label>
-            )}
-            <div className="customer-fields">
-              <label className="builder-field">
-                Cliente <small>Opcional</small>
-                <input
-                  {...register("customerName")}
-                  placeholder="Nome do cliente"
-                />
-              </label>
-              <label className="builder-field">
-                Telefone <small>Opcional</small>
-                <input
-                  {...register("customerPhone")}
-                  placeholder="(00) 00000-0000"
-                />
-              </label>
-            </div>
-            {quickSaleAvailable && (
-              <div className="quick-sale-block">
-                <label className="quick-sale-toggle">
-                  <input
-                    type="checkbox"
-                    checked={quickSale}
-                    onChange={(event) => {
-                      setQuickSale(event.target.checked);
-                      setQuickSaleError("");
-                    }}
-                  />
-                  <span aria-hidden="true" />
-                  <div>
-                    <strong><Zap size={15} /> Venda rápida</strong>
-                    <small>Recebe o pagamento e conclui a venda imediatamente.</small>
-                  </div>
-                </label>
-                {quickSale && (
-                  <div className="quick-sale-fields">
-                    <label className="builder-field">
-                      Caixa que receberá a venda
-                      <select
-                        value={quickPayment.cashRegisterSessionId}
-                        onChange={(event) => {
-                          setQuickPayment({ ...quickPayment, cashRegisterSessionId: event.target.value, method: "" });
-                          setQuickSaleError("");
-                        }}
-                      >
-                        <option value="">Selecione o caixa aberto</option>
-                        {(cashSessions.data ?? []).map((session) => (
-                          <option value={session.id} key={session.id}>
-                            {session.cashRegister.name} · {session.cashRegister.code}
-                          </option>
-                        ))}
-                      </select>
-                      {!cashSessions.isLoading && !cashSessions.data?.length && (
-                        <small>Nenhuma sessão de caixa aberta nesta unidade.</small>
-                      )}
+        {(errors.root?.serverError || quickSaleError) && (
+          <div className="form-error" role="alert">
+            {errors.root?.serverError?.message || quickSaleError}
+          </div>
+        )}
+        <div className="order-editor-grid">
+          <div className="order-builder">
+            <section>
+              <header>
+                <span>
+                  <UserRound size={18} />
+                </span>
+                <div>
+                  <strong>1. Atendimento</strong>
+                  <small>Canal, cliente, mesa ou endereço</small>
+                </div>
+              </header>
+              <div className="order-type-options">
+                {(["DINE_IN", "COUNTER", "TAKEAWAY", "DELIVERY"] as const).map(
+                  (value) => (
+                    <label
+                      className={type === value ? "selected" : ""}
+                      key={value}
+                    >
+                      <input type="radio" value={value} {...register("type")} />
+                      {value === "DINE_IN"
+                        ? "Salão"
+                        : value === "COUNTER"
+                          ? "Balcão"
+                          : value === "TAKEAWAY"
+                            ? "Retirada"
+                            : "Delivery"}
                     </label>
-                    <label className="builder-field">
-                      Meio de pagamento
-                      <select
-                        value={quickPayment.method}
-                        disabled={!quickPayment.cashRegisterSessionId}
-                        onChange={(event) => {
-                          const method = event.target.value as PaymentMethod;
-                          setQuickPayment({ ...quickPayment, method, receivedAmount: method === "CASH" ? quickPayment.receivedAmount : "" });
-                          setQuickSaleError("");
-                        }}
-                      >
-                        <option value="">Selecione o meio</option>
-                        {configuredMethods.map((item) => (
-                          <option value={item.method} key={item.method}>
-                            {paymentMethodLabels[item.method]}
-                            {item.operationFeePercent != null ? ` · taxa ${Number(item.operationFeePercent).toLocaleString("pt-BR")}%` : ""}
-                          </option>
-                        ))}
-                      </select>
-                      {quickPayment.cashRegisterSessionId && !configuredMethods.length && (
-                        <small>Este terminal não possui meios de pagamento configurados.</small>
-                      )}
-                    </label>
-                    {quickPayment.method === "CASH" && <div className="quick-sale-cash">
-                      <label className="builder-field">
-                        Valor recebido
-                        <div className="quick-sale-money">
-                          <span>R$</span>
-                          <input
-                            inputMode="decimal"
-                            value={quickPayment.receivedAmount}
-                            onChange={(event) => {
-                              setQuickPayment({ ...quickPayment, receivedAmount: event.target.value });
-                              setQuickSaleError("");
-                            }}
-                            placeholder="0,00"
-                          />
-                        </div>
-                      </label>
-                      <div className="quick-sale-change">
-                        <span>Troco</span>
-                        <strong>{(() => {
-                          const received = parsePaymentAmount(quickPayment.receivedAmount);
-                          return Number.isFinite(received) && received >= total ? money(received - total) : "—";
-                        })()}</strong>
-                      </div>
-                    </div>}
-                  </div>
+                  ),
                 )}
               </div>
-            )}
-            {type === "DELIVERY" && (
-              <div className="delivery-fields">
-                <label className="builder-field field-wide">
-                  <MapPin size={15} /> Rua
-                  <input {...register("street")} placeholder="Nome da rua" />
-                  <FieldError message={errors.street?.message} />
+              {type === "DINE_IN" && (
+                <label className="builder-field">
+                  Comanda aberta
+                  <select {...register("tabId")}>
+                    <option value="">Selecione uma comanda</option>
+                    {(tabs.data ?? []).map((tab) => (
+                      <option value={tab.id} key={tab.id}>
+                        {tab.label || `Comanda ${tab.id.slice(0, 8)}`}
+                        {tab.table?.number ? ` · Mesa ${tab.table.number}` : ""}
+                      </option>
+                    ))}
+                  </select>
+                  <FieldError message={errors.tabId?.message} />
+                </label>
+              )}
+              <div className="customer-fields">
+                <label className="builder-field">
+                  Cliente <small>Opcional</small>
+                  <input
+                    {...register("customerName")}
+                    placeholder="Nome do cliente"
+                  />
                 </label>
                 <label className="builder-field">
-                  Número
-                  <input {...register("number")} placeholder="123" />
-                  <FieldError message={errors.number?.message} />
-                </label>
-                <label className="builder-field">
-                  Bairro
-                  <input {...register("neighborhood")} placeholder="Bairro" />
-                  <FieldError message={errors.neighborhood?.message} />
-                </label>
-                <label className="builder-field">
-                  Cidade
-                  <input {...register("city")} placeholder="Cidade" />
-                  <FieldError message={errors.city?.message} />
+                  Telefone <small>Opcional</small>
+                  <input
+                    {...register("customerPhone")}
+                    placeholder="(00) 00000-0000"
+                  />
                 </label>
               </div>
-            )}
-          </section>
-          <section>
+              {quickSaleAvailable && (
+                <div className="quick-sale-block">
+                  <label className="quick-sale-toggle">
+                    <input
+                      type="checkbox"
+                      checked={quickSale}
+                      onChange={(event) => {
+                        setQuickSale(event.target.checked);
+                        setQuickSaleError("");
+                      }}
+                    />
+                    <span aria-hidden="true" />
+                    <div>
+                      <strong>
+                        <Zap size={15} /> Venda rápida
+                      </strong>
+                      <small>
+                        Recebe o pagamento e conclui a venda imediatamente.
+                      </small>
+                    </div>
+                  </label>
+                  {quickSale && (
+                    <div className="quick-sale-fields">
+                      <label className="builder-field">
+                        Caixa que receberá a venda
+                        <select
+                          value={quickPayment.cashRegisterSessionId}
+                          onChange={(event) => {
+                            setQuickPayment({
+                              ...quickPayment,
+                              cashRegisterSessionId: event.target.value,
+                              method: "",
+                            });
+                            setQuickSaleError("");
+                          }}
+                        >
+                          <option value="">Selecione o caixa aberto</option>
+                          {(cashSessions.data ?? []).map((session) => (
+                            <option value={session.id} key={session.id}>
+                              {session.cashRegister.name} ·{" "}
+                              {session.cashRegister.code}
+                            </option>
+                          ))}
+                        </select>
+                        {!cashSessions.isLoading &&
+                          !cashSessions.data?.length && (
+                            <small>
+                              Nenhuma sessão de caixa aberta nesta unidade.
+                            </small>
+                          )}
+                      </label>
+                      <label className="builder-field">
+                        Meio de pagamento
+                        <select
+                          value={quickPayment.method}
+                          disabled={!quickPayment.cashRegisterSessionId}
+                          onChange={(event) => {
+                            const method = event.target.value as PaymentMethod;
+                            setQuickPayment({
+                              ...quickPayment,
+                              method,
+                              receivedAmount:
+                                method === "CASH"
+                                  ? quickPayment.receivedAmount
+                                  : "",
+                            });
+                            setQuickSaleError("");
+                          }}
+                        >
+                          <option value="">Selecione o meio</option>
+                          {configuredMethods.map((item) => (
+                            <option value={item.method} key={item.method}>
+                              {paymentMethodLabels[item.method]}
+                              {item.operationFeePercent != null
+                                ? ` · taxa ${Number(item.operationFeePercent).toLocaleString("pt-BR")}%`
+                                : ""}
+                            </option>
+                          ))}
+                        </select>
+                        {quickPayment.cashRegisterSessionId &&
+                          !configuredMethods.length && (
+                            <small>
+                              Este terminal não possui meios de pagamento
+                              configurados.
+                            </small>
+                          )}
+                      </label>
+                      {quickPayment.method === "CASH" && (
+                        <div className="quick-sale-cash">
+                          <label className="builder-field">
+                            Valor recebido
+                            <div className="quick-sale-money">
+                              <span>R$</span>
+                              <input
+                                inputMode="decimal"
+                                value={quickPayment.receivedAmount}
+                                onChange={(event) => {
+                                  setQuickPayment({
+                                    ...quickPayment,
+                                    receivedAmount: event.target.value,
+                                  });
+                                  setQuickSaleError("");
+                                }}
+                                placeholder="0,00"
+                              />
+                            </div>
+                          </label>
+                          <div className="quick-sale-change">
+                            <span>Troco</span>
+                            <strong>
+                              {(() => {
+                                const received = parsePaymentAmount(
+                                  quickPayment.receivedAmount,
+                                );
+                                return Number.isFinite(received) &&
+                                  received >= total
+                                  ? money(received - total)
+                                  : "—";
+                              })()}
+                            </strong>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+              )}
+              {type === "DELIVERY" && (
+                <div className="delivery-fields">
+                  <label className="builder-field field-wide">
+                    <MapPin size={15} /> Rua
+                    <input {...register("street")} placeholder="Nome da rua" />
+                    <FieldError message={errors.street?.message} />
+                  </label>
+                  <label className="builder-field">
+                    Número
+                    <input {...register("number")} placeholder="123" />
+                    <FieldError message={errors.number?.message} />
+                  </label>
+                  <label className="builder-field">
+                    Bairro
+                    <input {...register("neighborhood")} placeholder="Bairro" />
+                    <FieldError message={errors.neighborhood?.message} />
+                  </label>
+                  <label className="builder-field">
+                    Cidade
+                    <input {...register("city")} placeholder="Cidade" />
+                    <FieldError message={errors.city?.message} />
+                  </label>
+                </div>
+              )}
+            </section>
+            <section>
+              <header>
+                <span>
+                  <PackageSearch size={18} />
+                </span>
+                <div>
+                  <strong>2. Produtos</strong>
+                  <small>Itens e variações do catálogo</small>
+                </div>
+              </header>
+              <label className="product-picker-search">
+                <Search size={17} />
+                <input
+                  value={productSearch}
+                  onChange={(event) => setProductSearch(event.target.value)}
+                  placeholder="Pesquisar por nome, SKU ou categoria"
+                  aria-label="Buscar produtos"
+                />
+              </label>
+              <div className="order-catalog-grid max-h-96 overflow-y-auto">
+                {filteredProducts.map((product) => {
+                  const variants = product.variants.filter(
+                    (variant) => variant.active,
+                  );
+                  const count = (items ?? [])
+                    .filter((item) => item.productId === product.id)
+                    .reduce(
+                      (sum, item) =>
+                        sum + Number(item.quantity.replace(",", ".")),
+                      0,
+                    );
+                  return (
+                    <button
+                      type="button"
+                      className="order-catalog-product"
+                      key={product.id}
+                      onClick={() => selectProduct(product)}
+                      disabled={isSubmitting}
+                    >
+                      <span className="order-catalog-product-icon">
+                        <PackageSearch size={26} />
+                        {count > 0 && <b>{count.toLocaleString("pt-BR")}</b>}
+                      </span>
+                      <small>{product.category?.name ?? "Sem categoria"}</small>
+                      <strong>{product.name}</strong>
+                      <span className="order-catalog-product-price">
+                        {money(Number(product.basePrice))}
+                        <Plus size={17} />
+                      </span>
+                      <small>
+                        {variants.length
+                          ? `${variants.length} ${variants.length === 1 ? "variação disponível" : "variações disponíveis"}`
+                          : "Clique para adicionar"}
+                      </small>
+                    </button>
+                  );
+                })}
+              </div>
+              {products.isLoading && (
+                <div className="product-picker-status" role="status">
+                  <LoaderCircle className="spin" size={20} /> Carregando
+                  produtos...
+                </div>
+              )}
+              {products.isError && (
+                <div className="product-picker-status" role="alert">
+                  Não foi possível carregar os produtos.{" "}
+                  <button type="button" onClick={() => void products.refetch()}>
+                    Tentar novamente
+                  </button>
+                </div>
+              )}
+              {!products.isLoading &&
+                !products.isError &&
+                !filteredProducts.length && (
+                  <div className="product-picker-status">
+                    Nenhum produto encontrado.
+                  </div>
+                )}
+            </section>
+            <label className="builder-field order-notes-field">
+              Observações gerais <small>Opcional</small>
+              <textarea
+                {...register("notes")}
+                placeholder="Informações para a cozinha ou atendimento"
+              />
+            </label>
+          </div>
+          <aside className="order-summary">
             <header>
-              <span>
-                <PackageSearch size={18} />
-              </span>
-              <div>
-                <strong>2. Produtos</strong>
-                <small>Itens e variações do catálogo</small>
-              </div>
+              <ShoppingBasket size={19} />
+              <strong>Carrinho</strong>
             </header>
             <div className="order-product-cards">
               {fields.map((field, index) => {
@@ -500,19 +724,45 @@ export function NewOrderPage() {
                   (item) => item.id === items?.[index]?.productVariantId,
                 );
                 const itemTotal =
-                  (Number(product?.basePrice ?? 0) + Number(variant?.priceAdjustment ?? 0)) *
+                  (Number(product?.basePrice ?? 0) +
+                    Number(variant?.priceAdjustment ?? 0)) *
                   Number(items?.[index]?.quantity.replace(",", ".") || 0);
                 return (
                   <article className="order-product-card" key={field.id}>
-                    <span className="order-product-card-icon"><PackageSearch size={20} /></span>
+                    <span className="order-product-card-icon">
+                      <PackageSearch size={20} />
+                    </span>
                     <div className="order-product-card-copy">
                       <strong>{product?.name ?? "Produto indisponível"}</strong>
-                      <small>{variant?.name ?? "Padrão"}{items?.[index]?.notes ? ` · ${items[index].notes}` : ""}</small>
+                      <small>
+                        {variant?.name ?? "Padrão"}
+                        {items?.[index]?.notes
+                          ? ` · ${items[index].notes}`
+                          : ""}
+                      </small>
                     </div>
-                    <span className="order-product-card-quantity">{items?.[index]?.quantity}×</span>
-                    <strong className="order-product-card-price">{money(itemTotal)}</strong>
-                    <button type="button" className="edit-product-item" onClick={() => openEditProductModal(index)} aria-label={`Editar ${product?.name ?? "produto"}`}><Pencil size={15} /></button>
-                    <button type="button" className="remove-product-item" onClick={() => remove(index)} aria-label={`Remover ${product?.name ?? "produto"}`}><Trash2 size={16} /></button>
+                    <span className="order-product-card-quantity">
+                      {items?.[index]?.quantity}×
+                    </span>
+                    <strong className="order-product-card-price">
+                      {money(itemTotal)}
+                    </strong>
+                    <button
+                      type="button"
+                      className="edit-product-item"
+                      onClick={() => openEditProductModal(index)}
+                      aria-label={`Editar ${product?.name ?? "produto"}`}
+                    >
+                      <Pencil size={15} />
+                    </button>
+                    <button
+                      type="button"
+                      className="remove-product-item"
+                      onClick={() => remove(index)}
+                      aria-label={`Remover ${product?.name ?? "produto"}`}
+                    >
+                      <Trash2 size={16} />
+                    </button>
                   </article>
                 );
               })}
@@ -520,178 +770,226 @@ export function NewOrderPage() {
                 <div className="order-products-empty">
                   <ShoppingBasket size={26} />
                   <strong>Nenhum produto adicionado</strong>
-                  <span>Use o botão abaixo para montar o pedido.</span>
+                  <span>Clique nos produtos ao lado para montar o pedido.</span>
                 </div>
               )}
             </div>
             <FieldError message={errors.items?.message} />
+            <dl>
+              <div>
+                <dt>Subtotal</dt>
+                <dd>{money(total)}</dd>
+              </div>
+              <div>
+                <dt>Adicionais</dt>
+                <dd>R$ 0,00</dd>
+              </div>
+              <div>
+                <dt>Descontos</dt>
+                <dd>R$ 0,00</dd>
+              </div>
+              <div className="summary-total">
+                <dt>Total</dt>
+                <dd>{money(total)}</dd>
+              </div>
+            </dl>
             <button
-              type="button"
-              className="add-item-button"
-              onClick={openNewProductModal}
+              className="primary-button"
+              disabled={
+                isSubmitting ||
+                !establishmentId ||
+                !fields.length ||
+                products.isLoading ||
+                products.isError
+              }
             >
-              <Plus size={16} /> Adicionar novo produto
+              {isSubmitting ? (
+                <>
+                  <LoaderCircle className="spin" size={18} />{" "}
+                  {quickSale ? "Concluindo venda..." : "Criando pedido..."}
+                </>
+              ) : (
+                <>
+                  {quickSale ? "Concluir venda rápida" : "Confirmar pedido"}{" "}
+                  {quickSale ? <Zap size={18} /> : <ShoppingBasket size={18} />}
+                </>
+              )}
             </button>
-          </section>
-          <label className="builder-field order-notes-field">
-            Observações gerais <small>Opcional</small>
-            <textarea
-              {...register("notes")}
-              placeholder="Informações para a cozinha ou atendimento"
-            />
-          </label>
+          </aside>
         </div>
-        <aside className="order-summary">
-          <header>
-            <ShoppingBasket size={19} />
-            <strong>Resumo do pedido</strong>
-          </header>
-          <div className="summary-items">
-            {items
-              ?.filter((item) => item.productId)
-              .map((item, index) => {
-                const product = products.data?.find(
-                  (entry) => entry.id === item.productId,
-                );
-                return (
-                  <div key={`${item.productId}-${index}`}>
-                    <span>
-                      {item.quantity}× {product?.name}
-                    </span>
-                    <strong>
-                      {money(
-                        (Number(product?.basePrice ?? 0) +
-                          Number(
-                            product?.variants.find(
-                              (entry) => entry.id === item.productVariantId,
-                            )?.priceAdjustment ?? 0,
-                          )) *
-                          Number(item.quantity.replace(",", ".") || 0),
-                      )}
-                    </strong>
-                  </div>
-                );
-              })}
-          </div>
-          <dl>
-            <div>
-              <dt>Subtotal</dt>
-              <dd>{money(total)}</dd>
-            </div>
-            <div>
-              <dt>Adicionais</dt>
-              <dd>R$ 0,00</dd>
-            </div>
-            <div>
-              <dt>Descontos</dt>
-              <dd>R$ 0,00</dd>
-            </div>
-            <div className="summary-total">
-              <dt>Total</dt>
-              <dd>{money(total)}</dd>
-            </div>
-          </dl>
-          <button
-            className="primary-button"
-            disabled={isSubmitting || !establishmentId}
+      </form>
+      {productModalOpen && (
+        <div
+          className="product-picker-backdrop"
+          role="presentation"
+          onMouseDown={closeProductModal}
+        >
+          <section
+            ref={productDialogRef}
+            className="product-picker-modal"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="product-picker-title"
+            onKeyDown={(event) => {
+              if (event.key === "Escape") closeProductModal();
+            }}
+            onMouseDown={(event) => event.stopPropagation()}
           >
-            {isSubmitting ? (
-              <>
-                <LoaderCircle className="spin" size={18} /> {quickSale ? "Concluindo venda..." : "Criando pedido..."}
-              </>
-            ) : (
-              <>
-                {quickSale ? "Concluir venda rápida" : "Confirmar pedido"} {quickSale ? <Zap size={18} /> : <ShoppingBasket size={18} />}
-              </>
-            )}
-          </button>
-        </aside>
-      </div>
-    </form>
-    {productModalOpen && (
-      <div className="product-picker-backdrop" role="presentation" onMouseDown={closeProductModal}>
-        <section className="product-picker-modal" role="dialog" aria-modal="true" aria-labelledby="product-picker-title" onMouseDown={(event) => event.stopPropagation()}>
-          <header>
-            <span><PackageSearch size={21} /></span>
+            <header>
+              <span>
+                <PackageSearch size={21} />
+              </span>
+              <div>
+                <h2 id="product-picker-title">
+                  {editingItemIndex === null
+                    ? "Selecionar variação"
+                    : "Editar item do carrinho"}
+                </h2>
+                <p>
+                  Configure os detalhes deste item antes de adicionar ao
+                  carrinho.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={closeProductModal}
+                aria-label="Fechar"
+              >
+                <X size={19} />
+              </button>
+            </header>
+            <div className="product-picker-body">
+              <div className="order-selected-product">
+                <strong>{draftProduct?.name}</strong>
+                <span>
+                  {money(Number(draftProduct?.basePrice ?? 0))} · preço base
+                </span>
+              </div>
+              <div className="product-picker-fields">
+                <label className="builder-field">
+                  Variação
+                  <select
+                    autoFocus
+                    value={itemDraft.productVariantId}
+                    disabled={
+                      !draftProduct?.variants.some((variant) => variant.active)
+                    }
+                    onChange={(event) =>
+                      setItemDraft({
+                        ...itemDraft,
+                        productVariantId: event.target.value,
+                      })
+                    }
+                  >
+                    <option value="">
+                      {draftProduct?.variants.some((variant) => variant.active)
+                        ? "Selecione uma variação"
+                        : "Padrão"}
+                    </option>
+                    {draftProduct?.variants
+                      .filter((variant) => variant.active)
+                      .map((variant) => (
+                        <option value={variant.id} key={variant.id}>
+                          {variant.name} (
+                          {Number(variant.priceAdjustment) >= 0 ? "+ " : ""}
+                          {money(Number(variant.priceAdjustment))})
+                        </option>
+                      ))}
+                  </select>
+                </label>
+                <label className="builder-field product-picker-notes">
+                  Observação <small>Opcional</small>
+                  <input
+                    value={itemDraft.notes}
+                    maxLength={500}
+                    onChange={(event) =>
+                      setItemDraft({ ...itemDraft, notes: event.target.value })
+                    }
+                    placeholder="Ex.: sem cebola"
+                  />
+                </label>
+                <label className="builder-field">
+                  Quantidade
+                  <input
+                    value={itemDraft.quantity}
+                    inputMode="decimal"
+                    onChange={(event) => {
+                      setItemDraft({
+                        ...itemDraft,
+                        quantity: event.target.value,
+                      });
+                      setItemDraftError("");
+                    }}
+                  />
+                </label>
+              </div>
+              {itemDraftError && (
+                <div className="form-error" role="alert">
+                  {itemDraftError}
+                </div>
+              )}
+            </div>
+            <footer>
+              <button
+                type="button"
+                className="secondary-button"
+                onClick={closeProductModal}
+              >
+                Cancelar
+              </button>
+              <button
+                type="button"
+                className="primary-button"
+                onClick={saveProductItem}
+                disabled={!itemDraft.productId}
+              >
+                <Plus size={17} />{" "}
+                {editingItemIndex === null
+                  ? "Adicionar ao pedido"
+                  : "Salvar alterações"}
+              </button>
+            </footer>
+          </section>
+        </div>
+      )}
+      {completedQuickSale && (
+        <div className="quick-sale-success-backdrop" role="presentation">
+          <section
+            className="quick-sale-success-modal"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="quick-sale-success-title"
+          >
+            <span className="quick-sale-success-icon">
+              <CheckCircle2 size={28} />
+            </span>
+            <span className="eyebrow">Venda concluída</span>
+            <h2 id="quick-sale-success-title">
+              Venda #{String(completedQuickSale.sequence).padStart(4, "0")}{" "}
+              realizada com sucesso
+            </h2>
+            <p>O pagamento foi registrado e o estoque atualizado.</p>
             <div>
-              <h2 id="product-picker-title">{editingItemIndex === null ? "Adicionar novo produto" : "Editar produto"}</h2>
-              <p>Escolha um item do catálogo e configure os detalhes.</p>
+              <button
+                type="button"
+                className="secondary-button"
+                onClick={() =>
+                  navigate(`/pedidos/${completedQuickSale.orderId}`)
+                }
+              >
+                Ver detalhes
+              </button>
+              <button
+                type="button"
+                className="primary-button"
+                onClick={startAnotherQuickSale}
+              >
+                <Zap size={17} /> Fazer outra venda
+              </button>
             </div>
-            <button type="button" onClick={closeProductModal} aria-label="Fechar"><X size={19} /></button>
-          </header>
-          <div className="product-picker-body">
-            <label className="product-picker-search">
-              <Search size={17} />
-              <input autoFocus value={productSearch} onChange={(event) => setProductSearch(event.target.value)} placeholder="Pesquisar por nome, SKU ou categoria" />
-            </label>
-            <div className="product-picker-list">
-              {products.isLoading && <div className="product-picker-status"><LoaderCircle className="spin" size={20} /> Carregando produtos...</div>}
-              {!products.isLoading && filteredProducts.map((product) => (
-                <button
-                  type="button"
-                  className={itemDraft.productId === product.id ? "selected" : ""}
-                  key={product.id}
-                  onClick={() => {
-                    setItemDraft({ ...itemDraft, productId: product.id, productVariantId: "" });
-                    setItemDraftError("");
-                  }}
-                >
-                  <span><PackageSearch size={18} /></span>
-                  <div><strong>{product.name}</strong><small>{product.category?.name ?? product.sku ?? "Sem categoria"}</small></div>
-                  <b>{money(Number(product.basePrice))}</b>
-                  <i aria-hidden="true" />
-                </button>
-              ))}
-              {!products.isLoading && !filteredProducts.length && <div className="product-picker-status">Nenhum produto encontrado.</div>}
-            </div>
-            <div className="product-picker-fields">
-              <label className="builder-field">
-                Variação
-                <select value={itemDraft.productVariantId} disabled={!draftProduct?.variants.some((variant) => variant.active)} onChange={(event) => setItemDraft({ ...itemDraft, productVariantId: event.target.value })}>
-                  <option value="">Padrão</option>
-                  {draftProduct?.variants.filter((variant) => variant.active).map((variant) => (
-                    <option value={variant.id} key={variant.id}>{variant.name} ({Number(variant.priceAdjustment) >= 0 ? "+ " : ""}{money(Number(variant.priceAdjustment))})</option>
-                  ))}
-                </select>
-              </label>
-              <label className="builder-field product-picker-notes">
-                Observação <small>Opcional</small>
-                <input value={itemDraft.notes} maxLength={500} onChange={(event) => setItemDraft({ ...itemDraft, notes: event.target.value })} placeholder="Ex.: sem cebola" />
-              </label>
-              <label className="builder-field">
-                Quantidade
-                <input value={itemDraft.quantity} inputMode="decimal" onChange={(event) => { setItemDraft({ ...itemDraft, quantity: event.target.value }); setItemDraftError(""); }} />
-              </label>
-            </div>
-            {itemDraftError && <div className="form-error" role="alert">{itemDraftError}</div>}
-          </div>
-          <footer>
-            <button type="button" className="secondary-button" onClick={closeProductModal}>Cancelar</button>
-            <button type="button" className="primary-button" onClick={saveProductItem} disabled={!itemDraft.productId}>
-              <Plus size={17} /> {editingItemIndex === null ? "Adicionar ao pedido" : "Salvar alterações"}
-            </button>
-          </footer>
-        </section>
-      </div>
-    )}
-    {completedQuickSale && (
-      <div className="quick-sale-success-backdrop" role="presentation">
-        <section className="quick-sale-success-modal" role="dialog" aria-modal="true" aria-labelledby="quick-sale-success-title">
-          <span className="quick-sale-success-icon"><CheckCircle2 size={28} /></span>
-          <span className="eyebrow">Venda concluída</span>
-          <h2 id="quick-sale-success-title">Venda #{String(completedQuickSale.sequence).padStart(4, "0")} realizada com sucesso</h2>
-          <p>O pagamento foi registrado e o estoque atualizado.</p>
-          <div>
-            <button type="button" className="secondary-button" onClick={() => navigate(`/pedidos/${completedQuickSale.orderId}`)}>
-              Ver detalhes
-            </button>
-            <button type="button" className="primary-button" onClick={startAnotherQuickSale}>
-              <Zap size={17} /> Fazer outra venda
-            </button>
-          </div>
-        </section>
-      </div>
-    )}
+          </section>
+        </div>
+      )}
     </>
   );
 }

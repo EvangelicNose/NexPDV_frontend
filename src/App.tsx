@@ -18,6 +18,8 @@ import { OpenCashPage } from './pages/cash/OpenCashPage'
 import { CatalogLayout } from './features/catalog/CatalogLayout'
 import { CategoriesPage } from './pages/catalog/CategoriesPage'
 import { NewProductPage } from './pages/catalog/NewProductPage'
+import { NewVariantPage } from './pages/catalog/NewVariantPage'
+import { EditProductPage } from './pages/catalog/EditProductPage'
 import { OptionGroupsPage } from './pages/catalog/OptionGroupsPage'
 import { ProductDetailsPage } from './pages/catalog/ProductDetailsPage'
 import { ProductsPage } from './pages/catalog/ProductsPage'
@@ -39,6 +41,7 @@ import { AdminDashboardPage } from './pages/admin/AdminDashboardPage'
 import { NewAdminCompanyPage } from './pages/admin/NewAdminCompanyPage'
 import { EstablishmentSelectionPage } from './pages/EstablishmentSelectionPage'
 import { ReportsPage } from './pages/reports/ReportsPage'
+import { SalePage } from './pages/sales/SalePage'
 
 export default function App() {
   return (
@@ -49,6 +52,7 @@ export default function App() {
         <Route path="selecionar-unidade" element={<EstablishmentSelectionPage />} />
         <Route element={<TenantOnlyRoute />}><Route element={<AppLayout />}>
           <Route index element={<DashboardPage />} />
+          <Route path="venda" element={<SalePage />} />
           <Route path="pedidos" element={<OrdersLayout />}>
             <Route index element={<OrdersPage />} />
             <Route path="quadro" element={<OrdersBoardPage />} />
@@ -69,6 +73,8 @@ export default function App() {
           </Route>
           <Route path="catalogo/novo" element={<NewProductPage />} />
           <Route path="catalogo/produtos/:id" element={<ProductDetailsPage />} />
+          <Route path="catalogo/produtos/:id/editar" element={<EditProductPage />} />
+          <Route path="catalogo/produtos/:id/variacoes/nova" element={<NewVariantPage />} />
           <Route path="estoque" element={<StockLayout />}>
             <Route index element={<StockOverviewPage />} />
             <Route path="movimentacoes" element={<StockMovementsPage />} />

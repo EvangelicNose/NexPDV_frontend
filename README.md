@@ -4,6 +4,12 @@ Aplicação web do NexPDV construída com React, TypeScript e Vite.
 
 ## Stack inicial
 
+O módulo **Venda** (`/venda`) permite lançar produtos por SKU ou código de barras exato, inclusive de variações,
+com quantidade padrão de 1 unidade. Enter adiciona o item, e SKUs repetidos somam as quantidades.
+Selecione um caixa aberto e, ao concluir, um dos meios de pagamento configurados nesse terminal.
+A confirmação usa `/v1/sales/quick`, com proteção contra repetição da mesma venda em falhas de conexão.
+Produtos que exigem adicionais devem ser lançados pela tela de novo pedido.
+
 - React 19 e React Router
 - TanStack Query para estado assíncrono
 - Vite e TypeScript

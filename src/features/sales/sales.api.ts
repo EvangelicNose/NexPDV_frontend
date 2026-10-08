@@ -16,9 +16,9 @@ export const checkoutOrder = (orderId: string, payments: CheckoutPayment[]) =>
     body: JSON.stringify({ payments }),
   })
 
-export const createQuickSale = (input: QuickSaleInput) =>
+export const createQuickSale = (input: QuickSaleInput, idempotencyKey: string = crypto.randomUUID()) =>
   apiRequest<Sale>('/v1/sales/quick', {
     method: 'POST',
-    headers: { 'Idempotency-Key': crypto.randomUUID() },
+    headers: { 'Idempotency-Key': idempotencyKey },
     body: JSON.stringify(input),
   })

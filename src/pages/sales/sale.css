@@ -1,0 +1,467 @@
+.pos-page {
+  max-width: 1440px;
+  margin: auto;
+}
+.pos-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  margin-bottom: 26px;
+}
+.pos-heading h1 {
+  font-size: 32px;
+  margin-bottom: 8px;
+  letter-spacing: -1px;
+}
+.pos-heading p {
+  color: var(--muted);
+  font-size: 13px;
+  margin: 0;
+}
+.pos-badge {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: #e5eddc;
+  color: var(--green);
+  padding: 11px 15px;
+  border-radius: 24px;
+  font-size: 12px;
+  font-weight: 700;
+}
+.pos-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 320px;
+  gap: 22px;
+  align-items: start;
+}
+.pos-main {
+  min-width: 0;
+  display: grid;
+  gap: 20px;
+}
+.pos-scan,
+.pos-list,
+.pos-summary {
+  background: white;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+}
+.pos-scan {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 115px auto;
+  gap: 14px;
+  padding: 23px;
+  align-items: end;
+}
+.pos-scan label,
+.pos-register-label {
+  display: grid;
+  gap: 8px;
+  font-size: 12px;
+  font-weight: 700;
+}
+.pos-scan input,
+.pos-register-label select {
+  height: 48px;
+  width: 100%;
+  border: 1px solid var(--line);
+  border-radius: 9px;
+  padding: 0 12px;
+  background: #fcfdf9;
+  color: var(--ink);
+  font-size: 15px;
+}
+.pos-sku > div {
+  position: relative;
+}
+.pos-sku svg {
+  position: absolute;
+  left: 13px;
+  top: 12px;
+  color: var(--green);
+}
+.pos-sku input {
+  padding-left: 47px;
+}
+.pos-scan input:focus,
+.pos-summary select:focus,
+.pos-list input:focus {
+  outline: 2px solid var(--green);
+  outline-offset: 2px;
+}
+.pos-scan .primary-button {
+  height: 48px;
+}
+.pos-scan small {
+  grid-column: 1/-1;
+  color: var(--muted);
+  font-size: 11px;
+}
+.pos-list > header {
+  padding: 22px;
+  display: flex;
+  justify-content: space-between;
+  border-bottom: 1px solid var(--line);
+  align-items: center;
+}
+.pos-list h2,
+.pos-summary h2,
+.pos-payment h2 {
+  font-size: 17px;
+  margin: 0;
+}
+.pos-list header > span {
+  font-size: 12px;
+  color: var(--muted);
+}
+.pos-empty {
+  min-height: 330px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  color: var(--muted);
+  padding: 30px;
+  text-align: center;
+}
+.pos-empty svg {
+  color: #9ba892;
+}
+.pos-empty strong {
+  color: var(--ink);
+  font-size: 15px;
+}
+.pos-empty p {
+  font-size: 12px;
+  margin: 0;
+}
+.pos-table-wrap {
+  overflow-x: auto;
+}
+.pos-list table {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: left;
+  white-space: nowrap;
+}
+.pos-list th {
+  padding: 14px 18px;
+  background: #fafbf7;
+  color: var(--muted);
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+.pos-list td {
+  padding: 17px 18px;
+  border-top: 1px solid var(--line);
+  font-size: 13px;
+}
+.pos-list td:first-child {
+  white-space: normal;
+  min-width: 170px;
+}
+.pos-list td small {
+  display: block;
+  margin-top: 5px;
+  color: var(--muted);
+  font-size: 11px;
+}
+.pos-list td input {
+  width: 75px;
+  height: 36px;
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  padding: 6px;
+  font-size: 13px;
+}
+.pos-remove {
+  width: 32px;
+  height: 32px;
+  background: #fbefeb;
+  color: #b45f46;
+  border-radius: 7px;
+}
+.pos-summary {
+  padding: 24px;
+  position: sticky;
+  top: 100px;
+}
+.pos-register-label {
+  margin-top: 18px;
+}
+.pos-register-label select {
+  font-size: 12px;
+}
+.pos-summary dl {
+  border-block: 1px solid var(--line);
+  padding: 20px 0;
+  margin: 24px 0;
+  display: grid;
+  gap: 13px;
+}
+.pos-summary dl > div {
+  display: flex;
+  justify-content: space-between;
+  font-size: 13px;
+}
+.pos-summary dt {
+  color: var(--muted);
+}
+.pos-summary dd {
+  margin: 0;
+  font-weight: 700;
+}
+.pos-total {
+  display: grid;
+  gap: 8px;
+  margin-bottom: 24px;
+}
+.pos-total span,
+.pos-payment-total span {
+  color: var(--muted);
+  font-size: 12px;
+}
+.pos-total strong {
+  font:
+    800 34px "Manrope",
+    sans-serif;
+  letter-spacing: -1px;
+  color: var(--green-dark);
+}
+.pos-checkout {
+  width: 100%;
+  justify-content: center;
+  min-height: 48px;
+}
+.pos-summary-note {
+  display: block;
+  color: var(--muted);
+  font-size: 11px;
+  line-height: 1.6;
+  margin-top: 15px;
+}
+.pos-error {
+  padding: 13px 16px;
+  background: #fbeee8;
+  color: #a04735;
+  border: 1px solid #ebc9bd;
+  border-radius: 9px;
+  margin-bottom: 18px;
+  font-size: 13px;
+}
+.pos-success {
+  display: flex;
+  align-items: center;
+  gap: 13px;
+  padding: 18px 20px;
+  background: #e8f1df;
+  border: 1px solid #cdddbf;
+  border-radius: 12px;
+  color: var(--green-dark);
+  margin-bottom: 20px;
+}
+.pos-success > div {
+  display: grid;
+  gap: 5px;
+  flex: 1;
+}
+.pos-success strong {
+  font-size: 14px;
+}
+.pos-success span,
+.pos-success a {
+  font-size: 12px;
+}
+.pos-success a {
+  font-weight: 700;
+  text-decoration: underline;
+}
+.pos-inline-error {
+  font-size: 12px;
+  line-height: 1.6;
+  color: #a04735;
+}
+.pos-inline-error a,
+.pos-inline-error button {
+  text-decoration: underline;
+  background: none;
+  color: inherit;
+  padding: 0;
+}
+.pos-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: #17231999;
+  backdrop-filter: blur(3px);
+  z-index: 80;
+  display: grid;
+  place-items: center;
+  padding: 20px;
+}
+.pos-payment {
+  width: min(520px, 100%);
+  max-height: 90vh;
+  overflow: auto;
+  background: white;
+  border-radius: 18px;
+  padding: 28px;
+  box-shadow: 0 20px 80px #17231944;
+}
+.pos-payment > header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.pos-payment header button {
+  background: #f4f5f0;
+  color: var(--muted);
+  width: 34px;
+  height: 34px;
+  border-radius: 8px;
+}
+.pos-payment > p {
+  font-size: 12px;
+  color: var(--muted);
+  margin: 16px 0;
+}
+.pos-payment-total {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: #f4f7ed;
+  padding: 18px;
+  border-radius: 11px;
+  margin-bottom: 24px;
+}
+.pos-payment-total strong {
+  font:
+    800 28px "Manrope",
+    sans-serif;
+  color: var(--green-dark);
+}
+.pos-payment fieldset {
+  border: 0;
+  padding: 0;
+  margin: 0 0 22px;
+}
+.pos-payment legend {
+  font-size: 12px;
+  font-weight: 700;
+  margin-bottom: 12px;
+}
+.pos-methods {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+.pos-methods label {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 14px 12px;
+  border: 1px solid var(--line);
+  border-radius: 9px;
+  font-size: 12px;
+  cursor: pointer;
+}
+.pos-methods label.selected {
+  border-color: var(--green);
+  background: #eff5e7;
+  color: var(--green-dark);
+}
+.pos-methods input {
+  accent-color: var(--green);
+}
+.pos-payment form > p {
+  font-size: 12px;
+  line-height: 1.6;
+}
+.pos-page button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+.pos-page .sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+}
+dialog.pos-modal-backdrop {
+  border: 0;
+  margin: 0;
+  width: 100%;
+  height: 100%;
+  max-width: none;
+  max-height: none;
+  background: transparent;
+  color: var(--ink);
+}
+dialog.pos-modal-backdrop::backdrop {
+  background: #17231999;
+  backdrop-filter: blur(3px);
+}
+@media (max-width: 1100px) {
+  .pos-grid {
+    grid-template-columns: minmax(0, 1fr) 270px;
+  }
+  .pos-scan {
+    grid-template-columns: minmax(0, 1fr) 100px;
+  }
+  .pos-scan button {
+    grid-column: 1/-1;
+  }
+  .pos-list th,
+  .pos-list td {
+    padding: 13px 10px;
+  }
+  .pos-summary {
+    padding: 20px;
+  }
+}
+@media (max-width: 800px) {
+  .pos-grid {
+    grid-template-columns: 1fr;
+  }
+  .pos-summary {
+    position: static;
+  }
+  .pos-heading {
+    align-items: start;
+  }
+  .pos-heading h1 {
+    font-size: 27px;
+  }
+  .pos-badge {
+    white-space: nowrap;
+    padding: 9px;
+    font-size: 10px;
+  }
+  .pos-scan {
+    padding: 18px;
+  }
+  .pos-empty {
+    min-height: 230px;
+  }
+  .pos-success {
+    flex-wrap: wrap;
+  }
+  .pos-payment {
+    padding: 22px;
+  }
+}
+@media (max-width: 420px) {
+  .pos-methods {
+    grid-template-columns: 1fr;
+  }
+  .pos-scan {
+    grid-template-columns: minmax(0, 1fr) 85px;
+  }
+  .pos-heading p {
+    font-size: 12px;
+  }
+}
