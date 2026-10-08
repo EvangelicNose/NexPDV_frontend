@@ -1,7 +1,7 @@
 import { useQuery } from '@tanstack/react-query'
 import { Clock3, Database, HardDrive, Info, Layers, LoaderCircle, PackageSearch, RefreshCw, Trash2 } from 'lucide-react'
 import { useEffect, useState } from 'react'
-import { NavLink } from 'react-router-dom'
+import { SettingsTabs } from './SettingsTabs'
 import { useAuth } from '../../features/auth/auth-context'
 import { CATALOG_CLEARED, CATALOG_UPDATED, catalogScope, clearLocalCatalog, localCatalogStats, localProducts } from '../../features/catalog/catalog-local'
 import './settings.css'
@@ -46,7 +46,7 @@ export function LocalDataPage() {
   const data = stats.data
   return <div className="settings-page page-enter">
     <div className="catalog-heading"><div><span className="eyebrow">Preferências e operação</span><h1>Configurações</h1><p>Gerencie as configurações do seu estabelecimento.</p></div></div>
-    <nav className="orders-tabs" aria-label="Áreas de configurações"><NavLink to="/configuracoes/dados-locais"><Database size={16} /> Dados locais</NavLink></nav>
+    <SettingsTabs/>
     <section className="settings-local-panel">
       <header className="settings-local-heading"><span className="settings-icon"><Database size={24} /></span><div><h2>Dados locais</h2><p>Consulte produtos rapidamente com o catálogo salvo neste navegador.</p></div><span className="settings-status">{stats.isLoading ? 'Carregando' : data?.hasCatalog ? 'Catálogo disponível' : 'Sem catálogo local'}</span></header>
       <div className="settings-scope"><strong>{session?.company?.tradeName}</strong><span>{currentEstablishment?.name} · {session?.user.name}</span></div>

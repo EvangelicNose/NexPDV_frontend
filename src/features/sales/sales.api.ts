@@ -1,6 +1,13 @@
 import { apiRequest } from '../../lib/api'
 import type { CheckoutPayment, Sale } from './sales.types'
 
+export const cancelSale = (id: string, input: { reason: string; cashRegisterSessionId?: string }, idempotencyKey: string) =>
+  apiRequest<Sale>(`/v1/sales/${id}/cancel`, {
+    method: 'POST',
+    headers: { 'Idempotency-Key': idempotencyKey },
+    body: JSON.stringify(input),
+  })
+
 export type QuickSaleInput = {
   establishmentId: string
   items: Array<{ productId: string; productVariantId?: string; quantity: number; options: never[]; discount: number }>

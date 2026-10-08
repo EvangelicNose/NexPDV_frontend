@@ -3,11 +3,11 @@ export type PaymentMethod = 'CASH' | 'PIX' | 'CREDIT_CARD' | 'CREDIT_CARD_INSTAL
 export type SalePayment = {
   id: string
   method: PaymentMethod
-  status: 'PENDING' | 'APPROVED' | 'DECLINED' | 'REFUNDED' | 'PARTIALLY_REFUNDED'
+  status: 'PENDING' | 'APPROVED' | 'DECLINED' | 'REFUNDED' | 'PARTIALLY_REFUNDED' | 'CANCELLED'
   amount: string
   operationFee: string
   netAmount: string
-  cashRegisterSessionId: string
+  cashRegisterSessionId: string | null
   providerReference?: string | null
 }
 
@@ -15,7 +15,7 @@ export type Sale = {
   id: string
   orderId: string
   sequence: number
-  status: 'COMPLETED' | 'PARTIALLY_REFUNDED' | 'REFUNDED'
+  status: 'COMPLETED' | 'PARTIALLY_REFUNDED' | 'REFUNDED' | 'PENDING_PAYMENT' | 'PARTIALLY_PAID'
   subtotal: string
   additions: string
   discount: string
