@@ -13,6 +13,7 @@ import {
   PanelLeftOpen,
   RotateCcw,
   Search,
+  Settings,
   ShieldCheck,
   ShoppingCart,
   Users,
@@ -32,6 +33,7 @@ const navigation = [
   { to: "/estoque", label: "Estoque", icon: Boxes },
   { to: "/relatorios", label: "Relatórios", icon: BarChart3 },
   { to: "/equipe", label: "Equipe", icon: Users },
+  { to: "/configuracoes", label: "Configurações", icon: Settings },
 ];
 
 export function AppLayout() {

@@ -1,3 +1,4 @@
+import { catalogScope } from "../../features/catalog/catalog-local";
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { ArrowLeft, Barcode, Layers, LoaderCircle, Tags } from 'lucide-react'
@@ -48,7 +49,7 @@ export function NewVariantPage() {
     }
     await Promise.all([
       queryClient.invalidateQueries({ queryKey: ['product', id] }),
-      queryClient.invalidateQueries({ queryKey: ['products'] }),
+      queryClient.invalidateQueries({ queryKey: ['products', catalogScope()] }),
       queryClient.invalidateQueries({ queryKey: ['stock'] }),
     ])
     navigate(backTo, { replace: true })

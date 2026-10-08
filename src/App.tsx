@@ -42,6 +42,7 @@ import { NewAdminCompanyPage } from './pages/admin/NewAdminCompanyPage'
 import { EstablishmentSelectionPage } from './pages/EstablishmentSelectionPage'
 import { ReportsPage } from './pages/reports/ReportsPage'
 import { SalePage } from './pages/sales/SalePage'
+import { LocalDataPage } from './pages/settings/LocalDataPage'
 
 export default function App() {
   return (
@@ -53,6 +54,8 @@ export default function App() {
         <Route element={<TenantOnlyRoute />}><Route element={<AppLayout />}>
           <Route index element={<DashboardPage />} />
           <Route path="venda" element={<SalePage />} />
+          <Route path="configuracoes" element={<Navigate to="/configuracoes/dados-locais" replace />} />
+          <Route path="configuracoes/dados-locais" element={<LocalDataPage />} />
           <Route path="pedidos" element={<OrdersLayout />}>
             <Route index element={<OrdersPage />} />
             <Route path="quadro" element={<OrdersBoardPage />} />

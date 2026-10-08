@@ -1,3 +1,4 @@
+import { catalogScope } from "../../features/catalog/catalog-local";
 import { useQuery } from "@tanstack/react-query";
 import {
   Box,
@@ -7,6 +8,7 @@ import {
   Search,
 } from "lucide-react";
 import { useEffect, useState } from "react";
+import { useAuth } from "../../features/auth/auth-context";
 import { Link } from "react-router-dom";
 import {
   listCategories,
@@ -17,6 +19,9 @@ const money = (value: string) =>
     Number(value),
   );
 export function ProductsPage() {
+  useAuth();
+  const [syncError, setSyncError] = useState("");
+  const [syncing, setSyncing] = useState(false);
   const [search, setSearch] = useState("");
   const [searchTerm, setSearchTerm] = useState("");
   useEffect(() => {
@@ -26,7 +31,7 @@ export function ProductsPage() {
   const [categoryId, setCategoryId] = useState("");
   const [status, setStatus] = useState("");
   const products = useQuery({
-    queryKey: ["products", categoryId, status, searchTerm],
+    queryKey: ["products", catalogScope(), categoryId, status, searchTerm],
     queryFn: () =>
       listProducts({
         search: searchTerm || undefined,
@@ -69,10 +74,17 @@ export function ProductsPage() {
           <option value="active">Ativos</option>
           <option value="inactive">Inativos</option>
         </select>
-        <button onClick={() => void products.refetch()}>
-          <RefreshCw size={17} className={products.isFetching ? "spin" : ""} />
+        <button disabled={syncing} aria-label="Atualizar catálogo" onClick={async () => {
+          setSyncing(true);
+          setSyncError("");
+          try { await listProducts({}, true); await products.refetch(); }
+          catch { setSyncError("Não foi possível atualizar o catálogo. Os produtos locais continuam disponíveis."); }
+          finally { setSyncing(false); }
+        }}>
+          <RefreshCw size={17} className={products.isFetching || syncing ? "spin" : ""} />
         </button>
       </div>
+      {syncError && <div className="form-error" role="alert">{syncError}</div>}
       <div className="product-catalog-grid">
         {filtered.map((product) => (
           <Link

@@ -4,6 +4,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { BrowserRouter } from 'react-router-dom'
 import App from './App'
 import { AuthProvider } from './features/auth/AuthContext'
+import { CatalogSync } from './features/catalog/CatalogSync'
 import './index.css'
 
 const queryClient = new QueryClient({
@@ -17,6 +18,7 @@ createRoot(document.getElementById('root')!).render(
     <QueryClientProvider client={queryClient}>
      <BrowserRouter>
         <AuthProvider>
+          <CatalogSync />
           <App />
         </AuthProvider>
       </BrowserRouter>

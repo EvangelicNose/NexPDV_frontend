@@ -1,3 +1,4 @@
+import { catalogScope } from "../../features/catalog/catalog-local";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
@@ -60,7 +61,7 @@ export function NewOrderPage() {
   const navigate = useNavigate();
   const client = useQueryClient();
   const products = useQuery({
-    queryKey: ["products", "order-form"],
+    queryKey: ["products", catalogScope(), "order-form"],
     queryFn: () => listProducts({ active: true }),
   });
   const tabs = useQuery({

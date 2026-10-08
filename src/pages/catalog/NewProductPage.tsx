@@ -1,3 +1,4 @@
+import { catalogScope } from "../../features/catalog/catalog-local";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
@@ -100,7 +101,7 @@ export function ProductEditor({ product }: { product?: Product }) {
           const updated = await updateProduct(product.id, changes);
           queryClient.setQueryData(["product", product.id], updated);
           await Promise.all([
-            queryClient.invalidateQueries({ queryKey: ["products"] }),
+            queryClient.invalidateQueries({ queryKey: ["products", catalogScope()] }),
             queryClient.invalidateQueries({ queryKey: ["stock"] }),
           ]);
         }
@@ -122,7 +123,7 @@ export function ProductEditor({ product }: { product?: Product }) {
         active: values.active,
         trackInventory: values.trackInventory,
       });
-      await queryClient.invalidateQueries({ queryKey: ["products"] });
+      await queryClient.invalidateQueries({ queryKey: ["products", catalogScope()] });
       navigate(`/catalogo/produtos/${created.id}`, { replace: true });
     } catch (reason) {
       setError("root.serverError", {

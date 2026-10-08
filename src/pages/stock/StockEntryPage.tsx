@@ -1,3 +1,4 @@
+import { catalogScope } from "../../features/catalog/catalog-local";
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { ArrowLeft, Boxes, LoaderCircle, PackagePlus, ReceiptText, RefreshCw, RotateCcw } from 'lucide-react'
@@ -21,7 +22,7 @@ export function StockEntryPage() {
   const establishmentId = currentEstablishment?.id
   const navigate = useNavigate()
   const queryClient = useQueryClient()
-  const products = useQuery({ queryKey: ['products', 'stock-entry'], queryFn: () => listProducts({ active: true }) })
+  const products = useQuery({ queryKey: ['products', catalogScope(), 'stock-entry'], queryFn: () => listProducts({ active: true }) })
   const stock = useQuery({ queryKey: ['stock', establishmentId], queryFn: () => listStock({ establishmentId: establishmentId! }), enabled: Boolean(establishmentId) })
   const { register, control, handleSubmit, setValue, setError, formState: { errors, isSubmitting } } = useForm<StockEntryForm>({
     resolver: zodResolver(stockEntrySchema),

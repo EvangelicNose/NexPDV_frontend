@@ -1,4 +1,5 @@
 import { apiRequest } from "../../lib/api";
+import { catalogScope, localProducts, updateLocalProduct, expireLocalCatalog, type ProductFilters } from "./catalog-local";
 import type { Category, OptionGroup, Product, ProductVariant } from "./catalog.types";
 export const createProductVariant = (productId: string, input: {
   name: string;
@@ -6,21 +7,11 @@ export const createProductVariant = (productId: string, input: {
   barcode?: string;
   priceAdjustment: string;
   active: boolean;
-}) => apiRequest<ProductVariant>(`/v1/products/${productId}/variants`, {
+}) => mutateVariant(productId, () => apiRequest<ProductVariant>(`/v1/products/${productId}/variants`, {
   method: 'POST',
   body: JSON.stringify(input),
-});
-export const listProducts = (
-  input: { search?: string; sku?: string; barcode?: string; categoryId?: string; active?: boolean } = {},
-) => {
-  const query = new URLSearchParams({ limit: "100" });
-  if (input.search) query.set("search", input.search);
-  if (input.sku) query.set("sku", input.sku);
-  if (input.barcode) query.set("barcode", input.barcode);
-  if (input.categoryId) query.set("categoryId", input.categoryId);
-  if (input.active !== undefined) query.set("active", String(input.active));
-  return apiRequest<Product[]>(`/v1/products?${query}`);
-};
+}));
+export const listProducts = (input: ProductFilters = {}, force = false) => localProducts(input, force);
 export const getProduct = (id: string) =>
   apiRequest<Product>(`/v1/products/${id}`);
 export type UpdateProductInput = Partial<{
@@ -36,10 +27,10 @@ export type UpdateProductInput = Partial<{
   trackInventory: boolean;
 }>;
 export const updateProduct = (id: string, input: UpdateProductInput) =>
-  apiRequest<Product>(`/v1/products/${id}`, {
+  mutateProduct(() => apiRequest<Product>(`/v1/products/${id}`, {
     method: 'PATCH',
     body: JSON.stringify(input),
-  });
+  }));
 export const listCategories = (search?: string) =>
   apiRequest<Category[]>(
     `/v1/categories${search ? `?search=${encodeURIComponent(search)}` : ""}`,
@@ -59,7 +50,24 @@ export const createProduct = (input: {
   trackInventory: boolean;
   companyId: string;
 }) =>
-  apiRequest<Product>("/v1/products", {
+  mutateProduct(() => apiRequest<Product>("/v1/products", {
     method: "POST",
     body: JSON.stringify(input),
-  });
+  }));
+
+async function mutateProduct(request: () => Promise<Product>) {
+  const scope = catalogScope();
+  const product = await request();
+  await updateLocalProduct(scope, product);
+  return product;
+}
+async function mutateVariant(productId: string, request: () => Promise<ProductVariant>) {
+  const scope = catalogScope();
+  const variant = await request();
+  await expireLocalCatalog(scope);
+  if (catalogScope() === scope) {
+    try { await updateLocalProduct(scope, await getProduct(productId)); }
+    catch { /* Creation succeeded; the next synchronization will update the cache. */ }
+  }
+  return variant;
+}
