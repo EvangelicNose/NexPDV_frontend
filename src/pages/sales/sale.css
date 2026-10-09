@@ -141,6 +141,9 @@
 .pos-table-wrap {
   overflow-x: auto;
 }
+.pos-mobile-quantity {
+  display: none;
+}
 .pos-list table {
   width: 100%;
   border-collapse: collapse;
@@ -424,6 +427,28 @@ dialog.pos-modal-backdrop::backdrop {
   }
 }
 @media (max-width: 800px) {
+  .pos-list .pos-desktop-detail {
+    display: none;
+  }
+  .pos-list .pos-mobile-quantity {
+    display: inline;
+  }
+  .pos-list table {
+    table-layout: fixed;
+  }
+  .pos-list td:first-child {
+    min-width: 0;
+    overflow-wrap: anywhere;
+  }
+  .pos-list th:last-child,
+  .pos-list td:last-child {
+    width: 64px;
+    text-align: right;
+  }
+  .pos-list .pos-remove {
+    width: 44px;
+    height: 44px;
+  }
   .pos-grid {
     grid-template-columns: 1fr;
   }

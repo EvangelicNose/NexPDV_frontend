@@ -418,10 +418,10 @@ function SaleTerminal({ establishmentId }: { establishmentId: string }) {
                 <table>
                   <thead>
                     <tr>
-                      <th>Produto / SKU</th>
-                      <th>Valor unitário</th>
-                      <th>Quantidade</th>
-                      <th>Total</th>
+                      <th><span className="pos-desktop-detail">Produto / SKU</span><span className="pos-mobile-quantity">Produto</span></th>
+                      <th className="pos-desktop-detail">Valor unitário</th>
+                      <th className="pos-desktop-detail">Quantidade</th>
+                      <th className="pos-desktop-detail">Total</th>
                       <th>
                         <span className="sr-only">Remover</span>
                       </th>
@@ -431,16 +431,16 @@ function SaleTerminal({ establishmentId }: { establishmentId: string }) {
                     {lines.map((line) => (
                       <tr key={line.key}>
                         <td>
-                          <strong>{line.product.name}</strong>
-                          <small>
+                          <strong>{line.product.name}<span className="pos-mobile-quantity"> - {line.quantity}x</span></strong>
+                          <small className="pos-desktop-detail">
                             {line.variant?.name
                               ? `${line.variant.name} · `
                               : ""}
                             {line.sku}
                           </small>
                         </td>
-                        <td>{money(line.unitCents)}</td>
-                        <td>
+                        <td className="pos-desktop-detail">{money(line.unitCents)}</td>
+                        <td className="pos-desktop-detail">
                           <input
                             aria-label={`Quantidade de ${line.product.name} ${line.variant?.name ?? ""}`}
                             type="number"
@@ -468,7 +468,7 @@ function SaleTerminal({ establishmentId }: { establishmentId: string }) {
                             }}
                           />
                         </td>
-                        <td>
+                        <td className="pos-desktop-detail">
                           <strong>
                             {money(line.quantity * line.unitCents)}
                           </strong>

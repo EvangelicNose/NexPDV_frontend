@@ -66,6 +66,23 @@ test('layout cabe no viewport e modal pendente passa a análise de acessibilidad
   expect(box.x + box.width).toBeLessThanOrEqual(page.viewportSize().width + 1);
   const results = await new AxeBuilder({ page }).include('dialog.pix-modal').withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa']).analyze();
   expect(results.violations).toEqual([]);
+  if (info.project.name === 'mobile') {
+    for (const viewport of [{ width: 320, height: 640 }, { width: 667, height: 375 }]) {
+      await page.setViewportSize(viewport);
+      const header = await dialog.locator(':scope > header').boundingBox();
+      const footer = await dialog.locator(':scope > footer').boundingBox();
+      expect(header.y).toBeGreaterThanOrEqual(0);
+      expect(footer.y + footer.height).toBeLessThanOrEqual(viewport.height + 1);
+      expect(await dialog.evaluate(node => node.scrollWidth <= node.clientWidth + 1)).toBe(true);
+      const qr = page.getByRole('img', { name: 'QR Code para pagamento Pix' });
+      await qr.scrollIntoViewIfNeeded();
+      const qrBox = await qr.boundingBox(); const bodyBox = await dialog.locator('.pix-body').boundingBox();
+      expect(qrBox.y).toBeGreaterThanOrEqual(bodyBox.y - 1);
+      expect(qrBox.y + qrBox.height).toBeLessThanOrEqual(bodyBox.y + bodyBox.height + 1);
+    }
+    await page.setViewportSize({ width: 360, height: 800 });
+    await dialog.locator('.pix-body').evaluate(node => { node.scrollTop = 0; });
+  }
   await dialog.screenshot({ path: info.outputPath('pix-pending.png') });
 });
 

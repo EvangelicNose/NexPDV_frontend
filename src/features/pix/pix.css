@@ -1,1 +1,410 @@
-.pix-modal{width:min(600px,calc(100% - 24px));max-height:calc(100dvh - 32px);padding:0;border:0;border-radius:16px;color:var(--ink);box-shadow:0 25px 75px rgba(18,31,22,.25)}.pix-modal::backdrop{background:rgba(18,31,22,.55);backdrop-filter:blur(3px)}.pix-modal>header{display:grid;grid-template-columns:42px 1fr 34px;gap:12px;align-items:center;padding:20px;border-bottom:1px solid var(--line)}.pix-modal>header>span{display:grid;place-items:center;height:42px;background:#e1eee4;border-radius:10px;color:var(--green)}.pix-modal h2{margin:0;font-size:19px}.pix-modal header p{font-size:12px;color:#70786f;margin:5px 0 0}.pix-modal header button{background:transparent;padding:7px;color:var(--ink)}.pix-body{padding:22px;display:grid;gap:16px}.pix-warning{display:flex;align-items:flex-start;gap:10px;padding:14px;background:#fff3dc;color:#79531a;border-radius:10px;font-size:13px;line-height:1.6}.pix-warning svg{flex-shrink:0;margin-top:3px}.pix-warning p{margin:0}.pix-loading{display:flex;gap:10px;align-items:center;justify-content:center}.pix-amount{text-align:center;display:grid;gap:5px}.pix-amount small{color:#70786f}.pix-amount strong{font:800 30px 'Manrope',sans-serif;color:var(--green)}.pix-status{text-align:center;margin:0;padding:10px;border-radius:9px;font-size:13px}.pix-status.pending{background:#fff3dc;color:#79531a}.pix-status.paid{background:#e5f1e7;color:#39714d}.pix-status.cancelled{background:#fae9e4;color:#a74432}.pix-qr{display:flex;justify-content:center;background:#fff}.pix-qr svg{width:256px;max-width:100%;height:auto}.pix-instructions{text-align:center;font-size:12px;line-height:1.6;margin:0;color:#70786f}.pix-copy{display:grid;gap:8px}.pix-copy label,.pix-session,.pix-review label{display:grid;gap:8px;font-size:13px;font-weight:600}.pix-copy textarea,.pix-session select,.pix-review textarea{width:100%;padding:10px;border:1px solid var(--line);border-radius:8px;font:inherit;background:#fff;color:var(--ink)}.pix-copy textarea{font:11px monospace;resize:vertical;word-break:break-all}.pix-copy p{margin:0;font-size:12px;color:var(--green)}.pix-txid{overflow-wrap:anywhere;color:#70786f;font-size:11px}.pix-check{display:flex;align-items:flex-start;gap:10px;font-size:13px;line-height:1.6}.pix-check input{height:18px;width:18px;flex-shrink:0;margin-top:2px;accent-color:var(--green)}.pix-actions{display:flex;gap:10px;justify-content:flex-end;flex-wrap:wrap}.pix-actions button,.pix-copy button,.pix-done button{width:auto;margin:0;min-height:42px}.pix-review{padding:16px;border:1px solid var(--line);border-radius:10px;background:#f5f7f2}.pix-review h3{margin:0;font-size:16px}.pix-review p{font-size:13px;line-height:1.6}.pix-local-status{font-size:11px;line-height:1.6;color:#70786f;text-align:center;margin:0}.pix-done{text-align:center;display:grid;gap:10px;justify-items:center}.pix-done svg{color:var(--green)}.pix-done p{margin:0}.pix-done small{color:#70786f}.pix-modal>footer{padding:16px 22px;border-top:1px solid var(--line);display:flex;justify-content:flex-end}.pix-modal button:disabled{opacity:.55;cursor:not-allowed}.pix-modal :focus-visible{outline:2px solid var(--green);outline-offset:3px}.pix-body .form-error button{display:block;margin-top:8px;padding:8px;background:#fff;border-radius:6px}@media(max-width:480px){.pix-body{padding:16px}.pix-modal>header{padding:16px}.pix-actions{flex-direction:column}.pix-actions button{width:100%}.pix-amount strong{font-size:26px}}
+.pix-modal {
+  width: min(600px, calc(100% - 24px));
+  max-height: calc(100dvh - 32px);
+  padding: 0;
+  border: 0;
+  border-radius: 16px;
+  color: var(--ink);
+  box-shadow: 0 25px 75px rgba(18, 31, 22, 0.25);
+}
+.pix-modal::backdrop {
+  background: rgba(18, 31, 22, 0.55);
+  backdrop-filter: blur(3px);
+}
+.pix-modal > header {
+  display: grid;
+  grid-template-columns: 42px 1fr 34px;
+  gap: 12px;
+  align-items: center;
+  padding: 20px;
+  border-bottom: 1px solid var(--line);
+}
+.pix-modal > header > span {
+  display: grid;
+  place-items: center;
+  height: 42px;
+  background: #e1eee4;
+  border-radius: 10px;
+  color: var(--green);
+}
+.pix-modal h2 {
+  margin: 0;
+  font-size: 19px;
+}
+.pix-modal header p {
+  font-size: 12px;
+  color: #70786f;
+  margin: 5px 0 0;
+}
+.pix-modal header button {
+  background: transparent;
+  padding: 7px;
+  color: var(--ink);
+}
+.pix-body {
+  padding: 22px;
+  display: grid;
+  gap: 16px;
+}
+.pix-warning {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 14px;
+  background: #fff3dc;
+  color: #79531a;
+  border-radius: 10px;
+  font-size: 13px;
+  line-height: 1.6;
+}
+.pix-warning svg {
+  flex-shrink: 0;
+  margin-top: 3px;
+}
+.pix-warning p {
+  margin: 0;
+}
+.pix-loading {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  justify-content: center;
+}
+.pix-amount {
+  text-align: center;
+  display: grid;
+  gap: 5px;
+}
+.pix-amount small {
+  color: #70786f;
+}
+.pix-amount strong {
+  font:
+    800 30px "Manrope",
+    sans-serif;
+  color: var(--green);
+}
+.pix-status {
+  text-align: center;
+  margin: 0;
+  padding: 10px;
+  border-radius: 9px;
+  font-size: 13px;
+}
+.pix-status.pending {
+  background: #fff3dc;
+  color: #79531a;
+}
+.pix-status.paid {
+  background: #e5f1e7;
+  color: #39714d;
+}
+.pix-status.cancelled {
+  background: #fae9e4;
+  color: #a74432;
+}
+.pix-qr {
+  display: flex;
+  justify-content: center;
+  background: #fff;
+}
+.pix-qr svg {
+  width: 256px;
+  max-width: 100%;
+  height: auto;
+}
+.pix-instructions {
+  text-align: center;
+  font-size: 12px;
+  line-height: 1.6;
+  margin: 0;
+  color: #70786f;
+}
+.pix-copy {
+  display: grid;
+  gap: 8px;
+}
+.pix-copy label,
+.pix-session,
+.pix-review label {
+  display: grid;
+  gap: 8px;
+  font-size: 13px;
+  font-weight: 600;
+}
+.pix-copy textarea,
+.pix-session select,
+.pix-review textarea {
+  width: 100%;
+  padding: 10px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  font: inherit;
+  background: #fff;
+  color: var(--ink);
+}
+.pix-copy textarea {
+  font: 11px monospace;
+  resize: vertical;
+  word-break: break-all;
+}
+.pix-copy p {
+  margin: 0;
+  font-size: 12px;
+  color: var(--green);
+}
+.pix-txid {
+  overflow-wrap: anywhere;
+  color: #70786f;
+  font-size: 11px;
+}
+.pix-check {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  font-size: 13px;
+  line-height: 1.6;
+}
+.pix-check input {
+  height: 18px;
+  width: 18px;
+  flex-shrink: 0;
+  margin-top: 2px;
+  accent-color: var(--green);
+}
+.pix-actions {
+  display: flex;
+  gap: 10px;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+}
+.pix-actions button,
+.pix-copy button,
+.pix-done button {
+  width: auto;
+  margin: 0;
+  min-height: 42px;
+}
+.pix-review {
+  padding: 16px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: #f5f7f2;
+}
+.pix-review h3 {
+  margin: 0;
+  font-size: 16px;
+}
+.pix-review p {
+  font-size: 13px;
+  line-height: 1.6;
+}
+.pix-local-status {
+  font-size: 11px;
+  line-height: 1.6;
+  color: #70786f;
+  text-align: center;
+  margin: 0;
+}
+.pix-done {
+  text-align: center;
+  display: grid;
+  gap: 10px;
+  justify-items: center;
+}
+.pix-done svg {
+  color: var(--green);
+}
+.pix-done p {
+  margin: 0;
+}
+.pix-done small {
+  color: #70786f;
+}
+.pix-modal > footer {
+  padding: 16px 22px;
+  border-top: 1px solid var(--line);
+  display: flex;
+  justify-content: flex-end;
+}
+.pix-modal button:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+.pix-modal :focus-visible {
+  outline: 2px solid var(--green);
+  outline-offset: 3px;
+}
+.pix-body .form-error button {
+  display: block;
+  margin-top: 8px;
+  padding: 8px;
+  background: #fff;
+  border-radius: 6px;
+}
+@media (max-width: 480px) {
+  .pix-body {
+    padding: 16px;
+  }
+  .pix-modal > header {
+    padding: 16px;
+  }
+  .pix-actions {
+    flex-direction: column;
+  }
+  .pix-actions button {
+    width: 100%;
+  }
+  .pix-amount strong {
+    font-size: 26px;
+  }
+}
+.pix-modal {
+  box-sizing: border-box;
+  overflow: hidden;
+  background: #fff;
+}
+.pix-modal[open] {
+  display: flex;
+  flex-direction: column;
+}
+.pix-modal > header,
+.pix-modal > footer {
+  flex-shrink: 0;
+  min-width: 0;
+  background: #fff;
+}
+.pix-modal > header > div {
+  min-width: 0;
+}
+.pix-body {
+  flex: 1;
+  min-height: 0;
+  min-width: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  align-content: start;
+}
+.pix-body > * {
+  min-width: 0;
+}
+.pix-copy textarea,
+.pix-session select,
+.pix-review textarea {
+  box-sizing: border-box;
+  min-width: 0;
+  max-width: 100%;
+}
+.pix-modal > header button {
+  min-width: 44px;
+  min-height: 44px;
+}
+.pix-modal > header {
+  grid-template-columns: 42px minmax(0, 1fr) 44px;
+}
+@media (max-width: 480px) {
+  .pix-modal {
+    inset: 0;
+    margin: 0;
+    width: 100vw;
+    max-width: none;
+    height: 100dvh;
+    max-height: 100dvh;
+    border-radius: 0;
+  }
+  .pix-modal > header {
+    padding: 12px 16px;
+    padding-top: max(12px, env(safe-area-inset-top));
+    gap: 10px;
+  }
+  .pix-modal h2 {
+    font-size: 18px;
+  }
+  .pix-modal header p {
+    font-size: 12px;
+    line-height: 1.5;
+  }
+  .pix-body {
+    padding: 16px;
+    gap: 14px;
+  }
+  .pix-warning {
+    padding: 12px;
+    font-size: 12px;
+    line-height: 1.5;
+  }
+  .pix-modal > footer {
+    padding: 12px 16px;
+    padding-bottom: max(12px, env(safe-area-inset-bottom));
+  }
+  .pix-modal > footer button,
+  .pix-copy button,
+  .pix-actions button,
+  .pix-done button {
+    width: 100%;
+    min-height: 44px;
+    height: auto;
+    white-space: normal;
+    line-height: 1.4;
+    font-size: 14px;
+    padding: 10px 12px;
+  }
+  .pix-session select,
+  .pix-review textarea {
+    font-size: 16px;
+    min-height: 44px;
+  }
+  .pix-check {
+    font-size: 14px;
+  }
+  .pix-check input {
+    width: 20px;
+    height: 20px;
+  }
+  .pix-status {
+    font-size: 12px;
+    overflow-wrap: anywhere;
+  }
+  .pix-review {
+    padding: 12px;
+  }
+  .pix-review h3 {
+    font-size: 15px;
+  }
+}
+@media (max-width: 900px) and (max-height: 500px) {
+  .pix-modal {
+    inset: 0;
+    margin: 0;
+    width: 100vw;
+    max-width: none;
+    height: 100vh;
+    max-height: 100vh;
+    border-radius: 0;
+  }
+  .pix-modal > header {
+    padding: 8px 16px;
+  }
+  .pix-modal header p {
+    display: none;
+  }
+  .pix-body {
+    padding: 8px 16px;
+    gap: 12px;
+  }
+  .pix-qr svg {
+    width: min(256px, calc(100dvh - 150px));
+  }
+  .pix-modal > footer {
+    padding: 8px 16px;
+    padding-bottom: max(8px, env(safe-area-inset-bottom));
+  }
+  .pix-modal > footer button {
+    width: 100%;
+    min-height: 44px;
+    height: auto;
+    font-size: 14px;
+    line-height: 1.4;
+    padding: 10px 12px;
+  }
+}
