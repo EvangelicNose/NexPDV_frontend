@@ -3,3 +3,4 @@
 @media(max-width:650px){.detail-heading-actions{align-items:flex-end;flex-direction:column}.checkout-modal{max-height:calc(100vh - 20px)}.checkout-backdrop{padding:10px}.checkout-fields{grid-template-columns:1fr}.checkout-fields .checkout-wide{grid-column:auto}.checkout-modal>header,.checkout-modal form{padding-left:15px;padding-right:15px}}
 .checkout-cash-received{display:grid;grid-template-columns:1fr 1fr;gap:10px}.checkout-change{min-height:62px;border-radius:9px;padding:10px 12px;display:grid;align-content:center}.checkout-change span{font-size:8px}.checkout-change strong{font:800 16px 'Manrope';margin-top:2px}.checkout-change small{font-size:8px;margin-top:2px}.checkout-change.valid{background:#e5f1e7;color:#39714d}.checkout-change.invalid{background:#fff0ec;color:#ad5542}
 @media(max-width:650px){.checkout-cash-received{grid-template-columns:1fr}}
+.checkout-payment-inputs{border:0;padding:0;margin:0;min-width:0;display:grid;gap:15px}

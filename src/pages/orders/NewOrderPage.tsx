@@ -29,7 +29,9 @@ import {
   type OrderForm,
 } from "../../features/orders/order-form.schema";
 import { createOrder, listOpenTabs } from "../../features/orders/orders.api";
-import { createQuickSale } from "../../features/sales/sales.api";
+import { createQuickSale, prepareQuickPix, type QuickSaleInput } from "../../features/sales/sales.api";
+import { PixPaymentModal } from "../../features/pix/PixPaymentModal";
+import type { Sale } from "../../features/sales/sales.types";
 import {
   paymentMethodLabels,
   type PaymentMethod,
@@ -81,6 +83,8 @@ export function NewOrderPage() {
     cashRegisterSessionId: "",
   });
   const [quickSaleError, setQuickSaleError] = useState("");
+  const [pixSale, setPixSale] = useState<Sale | null>(null);
+  const quickRequest = useRef<{ fingerprint: string; key: string } | null>(null);
   const [completedQuickSale, setCompletedQuickSale] = useState<{
     orderId: string;
     sequence: number;
@@ -300,7 +304,7 @@ export function NewOrderPage() {
             return;
           }
         }
-        const sale = await createQuickSale({
+        const input: QuickSaleInput = {
           establishmentId,
           items: values.items.map((item) => ({
             productId: item.productId,
@@ -320,12 +324,20 @@ export function NewOrderPage() {
           ],
           discount: 0,
           fees: 0,
-        });
+        };
+        const fingerprint = JSON.stringify(input);
+        if (quickRequest.current?.fingerprint !== fingerprint) quickRequest.current = { fingerprint, key: crypto.randomUUID() };
+        const isPix = quickPayment.method === 'PIX';
+        const sale = isPix
+          ? await prepareQuickPix(input, quickRequest.current.key)
+          : await createQuickSale(input, quickRequest.current.key);
+        quickRequest.current = null;
         await Promise.all([
           client.invalidateQueries({ queryKey: ["orders"] }),
           client.invalidateQueries({ queryKey: ["cash-sessions"] }),
           client.invalidateQueries({ queryKey: ["stock"] }),
         ]);
+        if (isPix) { setPixSale(sale); return; }
         setCompletedQuickSale({
           orderId: sale.orderId,
           sequence: sale.sequence,
@@ -488,7 +500,7 @@ export function NewOrderPage() {
                         <Zap size={15} /> Venda rápida
                       </strong>
                       <small>
-                        Recebe o pagamento e conclui a venda imediatamente.
+                        Registra o pagamento no caixa. Pix exige confirmação manual do recebimento.
                       </small>
                     </div>
                   </label>
@@ -807,11 +819,11 @@ export function NewOrderPage() {
               {isSubmitting ? (
                 <>
                   <LoaderCircle className="spin" size={18} />{" "}
-                  {quickSale ? "Concluindo venda..." : "Criando pedido..."}
+                  {quickSale ? quickPayment.method === 'PIX' ? 'Preparando Pix...' : "Concluindo venda..." : "Criando pedido..."}
                 </>
               ) : (
                 <>
-                  {quickSale ? "Concluir venda rápida" : "Confirmar pedido"}{" "}
+                  {quickSale ? quickPayment.method === 'PIX' ? 'Gerar QR Code Pix' : "Concluir venda rápida" : "Confirmar pedido"}{" "}
                   {quickSale ? <Zap size={18} /> : <ShoppingBasket size={18} />}
                 </>
               )}
@@ -953,6 +965,13 @@ export function NewOrderPage() {
           </section>
         </div>
       )}
+      {pixSale && <PixPaymentModal saleId={pixSale.id} establishmentId={establishmentId!} initialCashSessionId={quickPayment.cashRegisterSessionId}
+        onClose={() => navigate(`/pedidos/${pixSale.orderId}`, { replace: true })}
+        onFinalized={sale => {
+          setPixSale(null);
+          for (const key of ['orders', 'cash-sessions', 'stock', 'reports-overview']) void client.invalidateQueries({ queryKey: [key] });
+          setCompletedQuickSale({ orderId: sale.orderId, sequence: sale.sequence });
+        }}/>}
       {completedQuickSale && (
         <div className="quick-sale-success-backdrop" role="presentation">
           <section

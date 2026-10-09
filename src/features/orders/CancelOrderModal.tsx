@@ -12,6 +12,8 @@ export function CancelOrderModal({ order, onClose }: { order: Order; onClose: ()
   const dialog = useRef<HTMLDialogElement>(null)
   const [reason, setReason] = useState('')
   const [cashRegisterSessionId, setCashRegisterSessionId] = useState('')
+  const [pixRefundConfirmed, setPixRefundConfirmed] = useState(false)
+  const needsPixRefund = Boolean(order.sale?.payments.some(payment => payment.method === 'PIX' && payment.pixTxid && ['APPROVED', 'PARTIALLY_REFUNDED'].includes(payment.status)))
   const [idempotencyKey, setIdempotencyKey] = useState(() => crypto.randomUUID())
   const needsCash = Boolean(order.sale?.payments.some(payment => payment.method === 'CASH' && payment.status !== 'REFUNDED' && Number(payment.amount) > 0))
   const sessions = useQuery({
@@ -28,6 +30,7 @@ export function CancelOrderModal({ order, onClose }: { order: Order; onClose: ()
         const sale = await cancelSale(order.sale.id, {
           reason: reason.trim(),
           ...(needsCash && { cashRegisterSessionId }),
+          ...(needsPixRefund && pixRefundConfirmed && { pixRefundConfirmed: true as const }),
         }, idempotencyKey)
         return { ...order, status: 'CANCELLED' as const, cancellationReason: reason.trim(), sale }
       }
@@ -41,7 +44,7 @@ export function CancelOrderModal({ order, onClose }: { order: Order; onClose: ()
       onClose()
     },
   })
-  const valid = reason.trim().length >= 3 && reason.trim().length <= 500 && (!needsCash || Boolean(sessions.data?.some(session => session.id === cashRegisterSessionId)))
+  const valid = reason.trim().length >= 3 && reason.trim().length <= 500 && (!needsCash || Boolean(sessions.data?.some(session => session.id === cashRegisterSessionId))) && (!needsPixRefund || pixRefundConfirmed)
   const submit = (event: FormEvent) => {
     event.preventDefault()
     if (valid && !mutation.isPending) mutation.mutate()
@@ -57,6 +60,7 @@ export function CancelOrderModal({ order, onClose }: { order: Order; onClose: ()
         <label className="checkout-wide" htmlFor="cancel-order-reason">Motivo do cancelamento<textarea id="cancel-order-reason" autoFocus required minLength={3} maxLength={500} rows={4} value={reason} disabled={mutation.isPending} onChange={event => { setReason(event.target.value); changeInput() }}/><small>Informe entre 3 e 500 caracteres.</small></label>
         {needsCash && <label className="checkout-wide" htmlFor="cancel-order-cash">Caixa para devolução em dinheiro<select id="cancel-order-cash" required value={cashRegisterSessionId} disabled={mutation.isPending || sessions.isLoading} onChange={event => { setCashRegisterSessionId(event.target.value); changeInput() }}><option value="">{sessions.isLoading ? 'Carregando caixas...' : 'Selecione um caixa aberto'}</option>{sessions.data?.map(session => <option key={session.id} value={session.id}>{session.cashRegister.name} · {session.cashRegister.code}</option>)}</select>{sessions.isError ? <small role="alert">Não foi possível carregar os caixas. <button type="button" onClick={() => void sessions.refetch()}>Tentar novamente</button></small> : !sessions.isLoading && !sessions.data?.length ? <small role="alert">Abra um caixa neste estabelecimento para devolver o dinheiro.</small> : null}</label>}
       </div>
+      {needsPixRefund && <><p className="pix-warning">Este cancelamento registra o estorno no NexPDV. A devolução do Pix deve ser realizada manualmente no aplicativo do banco.</p><label className="pix-check"><input type="checkbox" checked={pixRefundConfirmed} disabled={mutation.isPending} onChange={event => { setPixRefundConfirmed(event.target.checked); changeInput() }}/><span>Conferi a devolução do Pix na conta bancária antes de registrar o estorno.</span></label></>}
       {mutation.isError && <div className="form-error" role="alert">{mutation.error instanceof ApiError ? mutation.error.message : 'Não foi possível cancelar o pedido. Tente novamente.'}</div>}
       <footer><button type="button" className="secondary-button" onClick={onClose} disabled={mutation.isPending}>Voltar</button><button type="submit" className="cancel-order-button" disabled={!valid || mutation.isPending}>{mutation.isPending ? <RefreshCw size={16} className="spin"/> : <XCircle size={16}/>} {mutation.isPending ? 'Cancelando...' : 'Confirmar cancelamento'}</button></footer>
     </form>

@@ -3,7 +3,7 @@ import { ArrowRight, RefreshCw } from 'lucide-react'
 import { advanceOrder } from './orders.api'
 import { getNextOrderStatus, orderStatus, type Order } from './orders.types'
 
-export function OrderAdvanceButton({ order }: { order: Pick<Order, 'id' | 'status'> }) {
+export function OrderAdvanceButton({ order }: { order: Pick<Order, 'id' | 'status'> & { sale?: Order['sale'] } }) {
   const queryClient = useQueryClient()
   const next = getNextOrderStatus(order.status)
   const mutation = useMutation({
@@ -16,6 +16,6 @@ export function OrderAdvanceButton({ order }: { order: Pick<Order, 'id' | 'statu
       ])
     },
   })
-  if (!next) return null
+  if (!next || order.sale) return null
   return <div className="advance-order-action"><button onClick={() => mutation.mutate()} disabled={mutation.isPending}>{mutation.isPending ? <RefreshCw size={16} className="spin"/> : <ArrowRight size={16}/>} Avançar para {orderStatus[next].label}</button>{mutation.isError && <small>Não foi possível atualizar. O pedido pode ter sido alterado.</small>}</div>
 }

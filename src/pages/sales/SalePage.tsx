@@ -20,8 +20,10 @@ import type {
 import { listCashSessions } from "../../features/cash/cash.api";
 import {
   createQuickSale,
+  prepareQuickPix,
   type QuickSaleInput,
 } from "../../features/sales/sales.api";
+import { PixPaymentModal } from '../../features/pix/PixPaymentModal';
 import {
   paymentMethodLabels,
   type PaymentMethod,
@@ -103,6 +105,10 @@ function SaleTerminal({ establishmentId }: { establishmentId: string }) {
   const [method, setMethod] = useState<PaymentMethod | "">("");
   const [paying, setPaying] = useState(false);
   const [completed, setCompleted] = useState<Sale | null>(null);
+  const [pixSale, setPixSale] = useState<Sale | null>(null);
+  const [pixReceived, setPixReceived] = useState(false);
+  const [pixFinalized, setPixFinalized] = useState(false);
+  const [pixOrder, setPixOrder] = useState<{ id: string; received: boolean } | null>(null);
   const [submission, setSubmission] = useState<Submission | null>(null);
   const sessions = useQuery({
     queryKey: ["cash-sessions", "open", establishmentId],
@@ -140,7 +146,16 @@ function SaleTerminal({ establishmentId }: { establishmentId: string }) {
         void client.invalidateQueries({ queryKey: [key] });
     },
   });
-  const locked = sale.isPending || submission !== null;
+  const preparation = useMutation({ mutationFn: (request: Submission) => prepareQuickPix(request.input, request.key),
+    onSuccess: result => { setPixSale(result); setPixReceived(false); setPixFinalized(false); setPaying(false); setSubmission(null); void client.invalidateQueries({ queryKey: ['orders'] }) },
+  });
+  const locked = sale.isPending || preparation.isPending || submission !== null || pixSale !== null;
+  const closePix = () => {
+    if (!pixSale) return;
+    setPixOrder(pixFinalized ? null : { id: pixSale.orderId, received: pixReceived }); setPixSale(null);
+    setLines([]); setSku(''); setQuantity('1'); setMethod(''); setError(''); setSubmission(null);
+    requestAnimationFrame(() => skuInput.current?.focus());
+  };
 
   async function addProduct(event: FormEvent) {
     event.preventDefault();
@@ -282,7 +297,8 @@ function SaleTerminal({ establishmentId }: { establishmentId: string }) {
     setSubmission(request);
     setError("");
     try {
-      await sale.mutateAsync(request);
+      if (request.input.payments.some(payment => payment.method === 'PIX')) await preparation.mutateAsync(request);
+      else await sale.mutateAsync(request);
     } catch (failure) {
       setError(message(failure));
       // Keep the same payload and key after an uncertain response so retrying cannot duplicate a sale.
@@ -327,6 +343,7 @@ function SaleTerminal({ establishmentId }: { establishmentId: string }) {
           <Link to={`/pedidos/${completed.orderId}`}>Ver venda</Link>
         </div>
       )}
+      {pixOrder && <div className="pos-success" role="status"><CreditCard size={23}/><div><strong>{pixOrder.received ? 'Pix confirmado manualmente' : 'Pagamento Pix pendente'}</strong><span><Link to={`/pedidos/${pixOrder.id}`}>{pixOrder.received ? 'Ver pedido para finalização' : 'Retomar pagamento no pedido'}</Link></span></div></div>}
       {error && (
         <div className="pos-error" role="alert">
           {error}
@@ -646,19 +663,19 @@ function SaleTerminal({ establishmentId }: { establishmentId: string }) {
                 autoFocus
                 className="primary-button pos-checkout"
                 disabled={
-                  sale.isPending ||
+                  sale.isPending || preparation.isPending ||
                   (!submission &&
                     (!method ||
                       !selected ||
                       !methods.some((item) => item.method === method)))
                 }
               >
-                {sale.isPending ? (
+                {sale.isPending || preparation.isPending ? (
                   <LoaderCircle size={18} className="spin" />
                 ) : (
                   <CheckCircle2 size={18} />
                 )}{" "}
-                {sale.isPending
+                {preparation.isPending ? 'Preparando Pix...' : method === 'PIX' && !submission ? 'Gerar QR Code Pix' : sale.isPending
                   ? "Concluindo venda..."
                   : submission
                     ? "Tentar confirmar novamente"
@@ -668,6 +685,7 @@ function SaleTerminal({ establishmentId }: { establishmentId: string }) {
           </section>
         </dialog>
       )}
+      {pixSale && <PixPaymentModal saleId={pixSale.id} establishmentId={establishmentId} initialCashSessionId={sessionId} onClose={closePix} onPaid={() => setPixReceived(true)} onFinalized={sale => { setPixFinalized(true); setCompleted(sale) }}/>}
     </section>
   );
 }

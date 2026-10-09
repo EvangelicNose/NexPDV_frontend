@@ -9,6 +9,7 @@ export type SalePayment = {
   netAmount: string
   cashRegisterSessionId: string | null
   providerReference?: string | null
+  pixTxid?: string | null
 }
 
 export type Sale = {
@@ -22,11 +23,13 @@ export type Sale = {
   fees: string
   total: string
   refundedAmount: string
+  finalizedAt: string | null
+  finalizedByUserId: string | null
   createdAt: string
   payments: SalePayment[]
 }
 
-export type SaleSummary = Pick<Sale, 'id' | 'sequence' | 'status' | 'total' | 'createdAt' | 'payments'>
+export type SaleSummary = Pick<Sale, 'id' | 'sequence' | 'status' | 'total' | 'createdAt' | 'payments' | 'finalizedAt' | 'finalizedByUserId'>
 
 export type CheckoutPayment = {
   method: PaymentMethod

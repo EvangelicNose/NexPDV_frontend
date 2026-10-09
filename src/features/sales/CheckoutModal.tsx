@@ -1,10 +1,11 @@
-import { useMutation, useQuery } from '@tanstack/react-query'
-import { type FormEvent, useMemo, useState } from 'react'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { type FormEvent, useMemo, useState, useRef } from 'react'
 import { Banknote, CheckCircle2, CircleAlert, CreditCard, Plus, RefreshCw, Trash2, X } from 'lucide-react'
 import { useAuth } from '../auth/auth-context'
 import { listCashSessions } from '../cash/cash.api'
 import { ApiError } from '../../lib/api'
-import { checkoutOrder } from './sales.api'
+import { checkoutOrder, prepareOrderPix } from './sales.api'
+import { PixPaymentModal } from '../pix/PixPaymentModal'
 import { paymentMethodLabels, type PaymentMethod, type Sale } from './sales.types'
 
 type PaymentDraft = {
@@ -36,29 +37,41 @@ const newPayment = (amount: number): PaymentDraft => ({
   providerReference: '',
 })
 
-export function CheckoutModal({ orderId, total, onClose, onSuccess }: { orderId: string; total: string; onClose: () => void; onSuccess: (sale: Sale) => void }) {
+export function CheckoutModal({ orderId, total, establishmentId, saleId, onClose, onSuccess }: { orderId: string; total: string; establishmentId?: string; saleId?: string; onClose: () => void; onSuccess: (sale: Sale) => void }) {
   const { currentEstablishment } = useAuth()
+  const client = useQueryClient()
+  const preparationKey = useRef(crypto.randomUUID())
+  const unitId = establishmentId ?? currentEstablishment?.id ?? ''
+  const [pixSale, setPixSale] = useState<Sale | null>(null)
   const target = Number(total)
   const [payments, setPayments] = useState<PaymentDraft[]>(() => [newPayment(target)])
   const [validationError, setValidationError] = useState('')
   const cashSessions = useQuery({
-    queryKey: ['cash-sessions', 'open', currentEstablishment?.id],
-    queryFn: () => listCashSessions(currentEstablishment!.id, 'OPEN'),
-    enabled: Boolean(currentEstablishment?.id),
+    queryKey: ['cash-sessions', 'open', unitId],
+    queryFn: () => listCashSessions(unitId, 'OPEN'),
+    enabled: Boolean(unitId),
   })
   const paid = useMemo(() => payments.reduce((sum, payment) => sum + (parseMoney(payment.amount) ?? 0), 0), [payments])
   const difference = Math.round((target - paid) * 100) / 100
   const mutation = useMutation({ mutationFn: (input: Parameters<typeof checkoutOrder>[1]) => checkoutOrder(orderId, input), onSuccess })
+  const preparation = useMutation({ mutationFn: (input: Parameters<typeof checkoutOrder>[1]) => prepareOrderPix(orderId, input, preparationKey.current),
+    onSuccess: sale => { setPixSale(sale); void client.invalidateQueries({ queryKey: ['order', orderId] }); void client.invalidateQueries({ queryKey: ['orders'] }) },
+  })
+  const busy = mutation.isPending || preparation.isPending
+  const hasPix = payments.some(payment => payment.method === 'PIX')
 
   const update = (key: string, changes: Partial<PaymentDraft>) => {
     setPayments(current => current.map(payment => payment.key === key ? { ...payment, ...changes } : payment))
     setValidationError('')
     mutation.reset()
+    preparation.reset()
+    preparationKey.current = crypto.randomUUID()
   }
   const addPayment = () => setPayments(current => [...current, newPayment(Math.max(difference, 0))])
   const removePayment = (key: string) => setPayments(current => current.filter(payment => payment.key !== key))
   const submit = (event: FormEvent) => {
     event.preventDefault()
+    if (busy) return
     setValidationError('')
     mutation.reset()
     if (payments.some(payment => parseMoney(payment.amount) === null)) {
@@ -87,21 +100,32 @@ export function CheckoutModal({ orderId, total, onClose, onSuccess }: { orderId:
       setValidationError('O valor recebido em dinheiro deve ser igual ou maior que o valor a cobrar.')
       return
     }
-    mutation.mutate(payments.map(payment => ({
+    if (payments.filter(payment => payment.method === 'PIX').length > 1) {
+      setValidationError('Use um único pagamento Pix para o saldo. Os demais meios podem ser combinados com ele.')
+      return
+    }
+    const input = payments.map(payment => ({
       method: payment.method,
       amount: parseMoney(payment.amount)!.toFixed(2),
       cashRegisterSessionId: payment.cashRegisterSessionId,
       ...(payment.providerReference.trim() && { providerReference: payment.providerReference.trim() }),
-    })))
+    }))
+    if (hasPix) preparation.mutate(input)
+    else mutation.mutate(input)
   }
-  const serverError = mutation.error instanceof ApiError
-    ? mutation.error.message
-    : mutation.isError ? 'Não foi possível concluir a venda. Tente novamente.' : ''
+  const error = preparation.error ?? mutation.error
+  const serverError = error instanceof ApiError ? error.message : error ? 'Não foi possível concluir a operação. Tente novamente.' : ''
 
-  return <div className="checkout-backdrop" role="presentation" onMouseDown={() => !mutation.isPending && onClose()}>
+  if (saleId || pixSale) return <PixPaymentModal saleId={saleId ?? pixSale!.id} establishmentId={unitId}
+    initialCashSessionId={payments.find(payment => payment.method === 'PIX')?.cashRegisterSessionId}
+    onFinalized={onSuccess}
+    onClose={() => { void client.invalidateQueries({ queryKey: ['order', orderId] }); onClose() }}/>
+
+  return <div className="checkout-backdrop" role="presentation" onMouseDown={() => !busy && onClose()}>
     <div className="checkout-modal" role="dialog" aria-modal="true" aria-labelledby="checkout-title" onMouseDown={event => event.stopPropagation()}>
-      <header><span><CreditCard size={21}/></span><div><h2 id="checkout-title">Receber e finalizar</h2><p>Informe como o cliente realizou o pagamento.</p></div><button type="button" onClick={onClose} disabled={mutation.isPending} aria-label="Fechar"><X size={19}/></button></header>
+      <header><span><CreditCard size={21}/></span><div><h2 id="checkout-title">Receber e finalizar</h2><p>Informe como o cliente realizou o pagamento.</p></div><button type="button" onClick={onClose} disabled={busy} aria-label="Fechar"><X size={19}/></button></header>
       <form onSubmit={submit} noValidate>
+        <fieldset className="checkout-payment-inputs" disabled={busy}>
         <div className="checkout-total"><span>Total do pedido</span><strong>{money(target)}</strong></div>
         <section className="checkout-payments">
           <div className="checkout-section-title"><div><strong>Formas de pagamento</strong><small>Você pode dividir o valor entre vários meios.</small></div><button type="button" onClick={addPayment}><Plus size={15}/> Adicionar</button></div>
@@ -126,7 +150,9 @@ export function CheckoutModal({ orderId, total, onClose, onSuccess }: { orderId:
         </section>
         <div className={`checkout-balance ${Math.abs(difference) < 0.01 ? 'matched' : 'pending'}`}><span>{Math.abs(difference) < 0.01 ? <CheckCircle2 size={17}/> : <CircleAlert size={17}/>} {difference > 0 ? 'Falta receber' : difference < 0 ? 'Valor excedente' : 'Pagamento conferido'}</span><strong>{money(Math.abs(difference))}</strong></div>
         {(validationError || serverError) && <div className="form-error" role="alert">{validationError || serverError}</div>}
-        <footer><button type="button" className="secondary-button" onClick={onClose} disabled={mutation.isPending}>Cancelar</button><button className="primary-button" disabled={mutation.isPending || Math.abs(difference) >= 0.01}>{mutation.isPending ? <RefreshCw size={17} className="spin"/> : <CheckCircle2 size={17}/>} {mutation.isPending ? 'Finalizando venda...' : 'Confirmar pagamento'}</button></footer>
+        {hasPix && <p className="pix-local-status">{payments.some(payment => payment.method !== 'PIX') ? 'Ao continuar, os outros pagamentos serão registrados como recebidos. O Pix permanecerá pendente.' : 'O Pix ficará pendente até você conferir o recebimento e confirmar manualmente.'}</p>}
+        </fieldset>
+        <footer><button type="button" className="secondary-button" onClick={onClose} disabled={busy}>Cancelar</button><button className="primary-button" disabled={busy || Math.abs(difference) >= 0.01}>{busy ? <RefreshCw size={17} className="spin"/> : <CheckCircle2 size={17}/>} {preparation.isPending ? 'Preparando Pix...' : mutation.isPending ? 'Finalizando venda...' : hasPix ? payments.some(payment => payment.method !== 'PIX') ? 'Confirmar demais pagamentos e gerar Pix' : 'Gerar QR Code Pix' : 'Confirmar pagamento'}</button></footer>
       </form>
     </div>
   </div>
